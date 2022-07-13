@@ -1,0 +1,9 @@
+#Defaults file
+commands=commands.txt
+devices=devices.txt
+output=output.txt
+username=''
+smtpServer=''
+emailSource=''
+emailDestination=''
+commonPath=''
