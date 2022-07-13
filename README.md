@@ -10,3 +10,4 @@ Features:
 - Some broken features such as debug mode.
 - Upcoming works are in the REQUESTS.txt
 - Strongly recommend running this program from a different directory (i.e not the actual directory as the .py files). This allows you to keep you input and output files without cluttering thing up.
+- There are default values assigned, but for ease of use, use the configuration file.
