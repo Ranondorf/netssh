@@ -251,6 +251,7 @@ def main ():
     email_subject = ''
     processed_hosts = []
     failed_list = []
+    passed_list = []
     match_set = set()
 
     ####Block for parsing command line args####
@@ -465,12 +466,27 @@ def main ():
                             tail += '-'
                         output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
                     output_file.close()
+                    passed_list.append(processed_host)
                 except IOError as e:
                     print("\nCould not open input file. IOError with message: %s\n\n" % (str(e)))
-                    sys.exit()  
+                    sys.exit()
             ####Hosts that failed are appended to a list#####
             elif processed_host.result == 'fail':
                 failed_list.append(processed_host)
+        if len(passed_list) != 0:
+            passed_list_string = "\n\nCommand was successful on the following devices:\n\n"
+            for host in passed_list:
+               passed_list_string += "%s\n" % (host.hostname)
+            email_body += passed_list_string
+        if len(failed_list) != 0:
+            failed_list_string = "\n\nCommand failed on the following devices with error messages:\n\n"
+            for host in failed_list:
+               failed_list_string += "%s: %s\n" % (host.hostname,host.error)
+            email_body += failed_list_string         
+        
+        if delete_dir:
+            pass
+            #os.<delete directory#
         
         if zip_output:
             output_file_name = zipOutputFile(output_dirpath[:-1],os.listdir(output_dirpath),output_dirpath)
@@ -481,10 +497,7 @@ def main ():
                 print("\n\nEmail not sent")
                 print(str(e))
                 
-        if delete_dir:
-            pass
-            #os.<delete directory#
-        #Add option to delete zip file or delete output file
+        
          
          
 ##################################################
@@ -509,19 +522,22 @@ def main ():
                     tail = ''
                     for i in range(57 - len(command)): #Might need to catch here for long commands
                         tail += '-'
-                    
-                #if filter string does not exist or filter string exists in processed_host.outputs[command]
-                    if not filter_string:
-                        output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
-                    elif filter_string in processed_host.outputs[command]:
-                        match_set.add(processed_host.hostname)
-                        output_file.write("%s\nString matched\n\n" % (tail))
-                    else:
-                        output_file.write("%s\nNo match\n\n" % (tail))
+                    output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
+                    passed_list.append(processed_host)
             ####Hosts that failed are appended to a list#####
             elif processed_host.result == 'fail':
                 failed_list.append(processed_host)
         output_file.close()
+        if len(passed_list) != 0:
+            passed_list_string = "\n\nCommand was successful on the following devices:\n\n"
+            for host in passed_list:
+               passed_list_string += "%s\n" % (host.hostname)
+            email_body += passed_list_string
+        if len(failed_list) != 0:
+            failed_list_string = "\n\nCommand failed on the following devices with error messages:\n\n"
+            for host in failed_list:
+               failed_list_string += "%s: %s\n" % (host.hostname,host.error)
+            email_body += failed_list_string         
     
         #Look at zipping the file if it is too large    
         if os.stat(output_file_name).st_size > 5000000 or zip_output is True:
