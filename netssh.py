@@ -55,7 +55,7 @@ def pretty_print_hostname (hostname):
 ####Introduce debug flag####
 def read_config_file(config_file_name):
     parameters = {'commands':'commands.txt','devices':'devices.txt','emailDestination':'','output':'output.txt',\
-    'username':'','smtpServer':'','emailSource':'','commonPath':'','devModeEnable':'','sitePackagePath':'','emailSubject':'','emailBody':''}
+    'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','sitePackagePath':'','emailSubject':'','emailBody':''}
     config_file=open(config_file_name,'r')
     for line in config_file:
         rg = re.split(r'(=)',line)
@@ -249,6 +249,7 @@ def main ():
     mail_to = []
     email_body = ''
     email_subject = ''
+    abs_path = ''
     processed_hosts = []
     failed_list = []
     passed_list = []
@@ -328,11 +329,10 @@ def main ():
 
     ####These values can only be passed from the configuration file
     mail_to.append(configFileOutput['emailDestination'])
-    commonPath = configFileOutput['commonPath']
+    abs_path = configFileOutput['absPath']
     ####Import common utilities, local logging and email####
 
     try:
-        #sys.path.append(os.path.abspath(commonPath))
         import scriptlogger
         #import mailattachment
     except Exception as e:
