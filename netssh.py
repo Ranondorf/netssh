@@ -267,7 +267,7 @@ def main ():
             elif sys.argv[i] == '-o':
                 i+=1
                 output_file_name = sys.argv[i]
-            elif sys.argv[i] == '-m':
+            elif sys.argv[i] == '--find':
                 i+=1
                 filter_string = sys.argv[i]
             elif sys.argv[i] == '-u':
@@ -395,7 +395,7 @@ def main ():
 #Process output if filter flag set
 ######################################
     if filter_string:
-        print("\n\nMatch flag '-m' has been set, no output file will be generated\n")
+        print("\n\nMatch flag '--find' has been set, no output file will be generated\n")
         ####Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set####
         for processed_host in processed_hosts:
             if processed_host.result == 'success':     
