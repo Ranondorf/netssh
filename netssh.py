@@ -242,11 +242,13 @@ def main ():
     config_file_name = 'config.txt'
     devModeEnable = False
     zip_output = False
+    delete_dir = False
     threadCount = ''
     username = ''
     filter_string = ''
     mail_to = []
     email_body = ''
+    email_subject = ''
     processed_hosts = []
     failed_list = []
     match_set = set()
@@ -286,7 +288,15 @@ def main ():
                 devModeEnable = True
             elif sys.argv[i] == '-z':
                 zip_output = True
-     
+            elif sys.argv[i] == '--delete':
+                delete_dir = True
+            elif sys.argv[i] == '--subject':
+                i+=1
+                email_subject = sys.argv[i]
+            elif sys.argv[i] == '--body':
+                i+=1
+                email_body = sys.argv[i]
+
                     
     ####Remove try block####
     try:
@@ -465,7 +475,9 @@ def main ():
                 print("\n\nEmail not sent")
                 print(str(e))
                 
-         #Add option to delete zip file or delete output file
+        if delete_dir:
+            #os.<delete directory#
+        #Add option to delete zip file or delete output file
          
          
 ##################################################
