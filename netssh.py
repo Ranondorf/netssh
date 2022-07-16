@@ -451,7 +451,7 @@ def main ():
 ##################################################
 
     elif output_file_name == "SPLIT":
-        output_dirpath = "output_" + time.strftime("%Y%m%d_%H%M%S")+"/"
+        output_dirpath = abs_path + "output_" + time.strftime("%Y%m%d_%H%M%S") + "/"
         print("\n\nSplit option specified for multiple output files. Files will be available in directory, \"%s\"" % (output_dirpath))
         os.mkdir(output_dirpath, 0o777)
         for processed_host in processed_hosts:
@@ -483,7 +483,6 @@ def main ():
             for host in failed_list:
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string         
-        
         if delete_dir:
             pass
             #os.<delete directory#
@@ -544,7 +543,7 @@ def main ():
             print("\n\nFile size is greater than 5MB or compress flag set: output file will be compressed")
             try:
                 old_output_file_name = output_file_name
-                output_file_name = zipOutputFile("output",[output_file_name])
+                output_file_name = zipOutputFile(output_file_name,[output_file_name])
                 os.remove(old_output_file_name)
             except Exception as e:
                 print("\n\nUnable to compress file")
