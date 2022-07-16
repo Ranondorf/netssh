@@ -55,7 +55,7 @@ def pretty_print_hostname (hostname):
 ####Introduce debug flag####
 def read_config_file(config_file_name):
     parameters = {'commands':'commands.txt','devices':'devices.txt','emailDestination':'','output':'output.txt',\
-    'username':'','smtpServer':'','emailSource':'','commonPath':'','devModeEnable':'','sitePackagePath':''}
+    'username':'','smtpServer':'','emailSource':'','commonPath':'','devModeEnable':'','sitePackagePath':'','emailSubject':'','emailBody':''}
     config_file=open(config_file_name,'r')
     for line in config_file:
         rg = re.split(r'(=)',line)
@@ -110,7 +110,7 @@ def read_command_file(command_file_name):
 def read_device_file(device_file_name):
     devices_file = open(device_file_name,'r')
     hosts = []
-    valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[aruba_os]","[netscaler]"]
+    valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[aruba_os]","[netscaler]","[cisco_nxos]"]
     comment = False
     for line in devices_file:
         hostname=line.rstrip('\n\r\t')
@@ -295,7 +295,7 @@ def main ():
                 email_subject = sys.argv[i]
             elif sys.argv[i] == '--body':
                 i+=1
-                email_body = sys.argv[i]
+                email_body = sys.argv[i] + '\n\n'
 
                     
     ####Remove try block####
@@ -311,6 +311,12 @@ def main ():
        device_file_name = configFileOutput['devices']
     if not output_file_name:
        output_file_name = configFileOutput['output']
+    if not email_subject:
+        email_subject = configFileOutput['emailSubject']
+    if not email_subject:
+        email_subject = 'Output File for script: %s' % os.path.basename(__file__)
+    if not email_body:
+        email_body = configFileOutput['emailBody']
     if not username:
         username = configFileOutput['username']
     if not username:
@@ -432,7 +438,7 @@ def main ():
             email_body += failed_list_string
 
         try:
-            mailattachment.send_mail(emailSource,mail_to,"Output File for script: %s" % os.path.basename(__file__),email_body,None,smtpServer)
+            mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,None,smtpServer)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent")
@@ -469,13 +475,14 @@ def main ():
         if zip_output:
             output_file_name = zipOutputFile(output_dirpath[:-1],os.listdir(output_dirpath),output_dirpath)
             try:
-                mailattachment.send_mail(emailSource,mail_to,"Output File for script: %s" % os.path.basename(__file__),email_body,[output_file_name],smtpServer)
+                mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,[output_file_name],smtpServer)
                 print("\n\nEmail sent")
             except Exception as e:
                 print("\n\nEmail not sent")
                 print(str(e))
                 
         if delete_dir:
+            pass
             #os.<delete directory#
         #Add option to delete zip file or delete output file
          
@@ -531,7 +538,7 @@ def main ():
         #os.chmod(output_file_name,0o666)
 
         try:
-            mailattachment.send_mail(emailSource,mail_to,"Output File for script: %s" % os.path.basename(__file__),email_body,[output_file_name],smtpServer)
+            mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,[output_file_name],smtpServer)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent")
