@@ -55,7 +55,7 @@ def pretty_print_hostname (hostname):
 ####Introduce debug flag####
 def read_config_file(config_file_name):
     parameters = {'commands':'commands.txt','devices':'devices.txt','emailDestination':'','output':'output.txt',\
-    'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','sitePackagePath':'','emailSubject':'','emailBody':''}
+            'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','zipEnable':'','sitePackagePath':'','emailSubject':'','emailBody':''}
     config_file=open(config_file_name,'r')
     for line in config_file:
         rg = re.split(r'(=)',line)
@@ -241,7 +241,7 @@ def main ():
     output_file_name = ''
     config_file_name = 'config.txt'
     devModeEnable = False
-    zip_output = False
+    zip_output = ''
     delete_dir = False
     threadCount = ''
     username = ''
@@ -323,6 +323,11 @@ def main ():
         username = configFileOutput['username']
     if not username:
         username = input('Username: ')
+    if not zip_output:
+        if configFileOutput['zipEnable'] == 'True':
+            zip_output = True
+        elif configFileOutput['zipEnable'] == 'False':
+            zip_output = False
     emailSource = configFileOutput['emailSource']
     smtpServer = configFileOutput['smtpServer']
 
