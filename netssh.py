@@ -55,7 +55,7 @@ def pretty_print_hostname (hostname):
 ####Introduce debug flag####
 def read_config_file(config_file_name):
     parameters = {'commands':'commands.txt','devices':'devices.txt','emailDestination':'','output':'output.txt',\
-            'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','zipEnable':'','sitePackagePath':'','emailSubject':'','emailBody':''}
+            'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','zipEnable':'','sitePackagePath':'','emailSubject':'','emailBody':'','password':''}
     config_file=open(config_file_name,'r')
     for line in config_file:
         rg = re.split(r'(=)',line)
@@ -330,8 +330,14 @@ def main ():
             zip_output = False
     emailSource = configFileOutput['emailSource']
     smtpServer = configFileOutput['smtpServer']
-
-
+    if configFileOutput['password'] != '':
+        adpassword = configFileOutput['password']
+    else:
+        adpassword = getpass.getpass('Login Password: ')
+        confirmpassword = getpass.getpass('Reconfirm Password: ')
+        if adpassword != confirmpassword:
+            print('\nPasswords do not match')
+            sys.exit()
     ####These values can only be passed from the configuration file
     mail_to.append(configFileOutput['emailDestination'])
     abs_path = configFileOutput['absPath']
@@ -354,12 +360,12 @@ def main ():
 
     ####Read SSH credentials####
     #Basic check to see if a user can enter the same password twice. Doesn't guard against 2 identical wrong inputs (which will lock your AD account when run on multiple devices).
-    adpassword = getpass.getpass('Login Password: ')
+    '''adpassword = getpass.getpass('Login Password: ')
     confirmpassword = getpass.getpass('Reconfirm Password: ')
 
     if adpassword != confirmpassword:
         print("\nPasswords do not match")
-        sys.exit()
+        sys.exit()'''
 
     ####Logging configuration to troubleshoot netmiko issues####
     if devModeEnable:    
