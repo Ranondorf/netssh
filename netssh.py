@@ -59,15 +59,19 @@ def read_config_file(config_file_name):
             'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','zipEnable':'','sitePackagePath':'','emailSubject':'','emailBody':'','key':'','encryptedPassword':''}
     config_file=open(config_file_name,'r')
     for line in config_file:
-        rg = re.split(r'(=)',line)
+        split_line = line.split('=')
         ####Work in a try block here
-        if rg[0] in parameters:
-            parameters[rg[0]]=rg[2].rstrip('\n')
+        if split_line[0] in parameters:
+            split_line[1]=split_line[1].rstrip('\n')
             #Read files for key and encrypted password and convert values to byte values to be used in decryption later
-            if rg[0] == 'key' or rg[0] == 'encryptedPassword':
-                readFile = open(parameters[rg[0]],'r')
+            if split_line[0] == 'key' or split_line[0] == 'encryptedPassword':
+                readFile = open(parameters[split_line[0]],'r')
                 singleLine = readFile.readline().rstrip('\n')
-                parameters[rg[0]] = bytes(singleLine,'utf-8')
+                parameters[split_line[0]] = bytes(singleLine,'utf-8')
+            elif split_line[0] == 'emailDestination':
+                parameters[split_line[0]] = split_line[1].split(',')
+            else:
+                parameters[split_line[0]]=split_line[1]
     config_file.close()
     return parameters
 
@@ -347,7 +351,7 @@ def main ():
             print('\nPasswords do not match')
             sys.exit()
     ####These values can only be passed from the configuration file
-    mail_to.append(configFileOutput['emailDestination'])
+    mail_to += configFileOutput['emailDestination']
     abs_path = configFileOutput['absPath']
     try:
         import scriptlogger
