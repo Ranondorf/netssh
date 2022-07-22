@@ -17,6 +17,7 @@ import logging
 from zipfile import ZipFile
 from zipfile import ZIP_DEFLATED
 import mailattachment
+from cryptography.fernet import Fernet
 
 
 class network_object(object):
@@ -55,12 +56,18 @@ def pretty_print_hostname (hostname):
 ####Introduce debug flag####
 def read_config_file(config_file_name):
     parameters = {'commands':'commands.txt','devices':'devices.txt','emailDestination':'','output':'output.txt',\
-            'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','zipEnable':'','sitePackagePath':'','emailSubject':'','emailBody':'','password':''}
+            'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','zipEnable':'','sitePackagePath':'','emailSubject':'','emailBody':'','key':'','encryptedPassword':''}
     config_file=open(config_file_name,'r')
     for line in config_file:
         rg = re.split(r'(=)',line)
+        ####Work in a try block here
         if rg[0] in parameters:
             parameters[rg[0]]=rg[2].rstrip('\n')
+            #Read files for key and encrypted password and convert values to byte values to be used in decryption later
+            if rg[0] == 'key' or rg[0] == 'encryptedPassword':
+                readFile = open(parameters[rg[0]],'r')
+                singleLine = readFile.readline().rstrip('\n')
+                parameters[rg[0]] = bytes(singleLine,'utf-8')
     config_file.close()
     return parameters
 
@@ -132,7 +139,6 @@ def read_device_file(device_file_name):
     devices_file.close()  
     return hosts
     
-#def create_output_file(output_file_name):
 
 def zipOutputFile (output_file_name,raw_output_files,path=''):
     zipped_output_file = output_file_name + '.zip'
@@ -330,8 +336,10 @@ def main ():
             zip_output = False
     emailSource = configFileOutput['emailSource']
     smtpServer = configFileOutput['smtpServer']
-    if configFileOutput['password'] != '':
-        adpassword = configFileOutput['password']
+    #Check to see if encrypted password can be read from file
+    if configFileOutput['key']:
+        fnet_key = Fernet(configFileOutput['key'])
+        adpassword = fnet_key.decrypt(configFileOutput['encryptedPassword']).decode()
     else:
         adpassword = getpass.getpass('Login Password: ')
         confirmpassword = getpass.getpass('Reconfirm Password: ')
@@ -341,8 +349,6 @@ def main ():
     ####These values can only be passed from the configuration file
     mail_to.append(configFileOutput['emailDestination'])
     abs_path = configFileOutput['absPath']
-    ####Import common utilities, local logging and email####
-
     try:
         import scriptlogger
         #import mailattachment
