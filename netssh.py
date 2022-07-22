@@ -18,6 +18,7 @@ from zipfile import ZipFile
 from zipfile import ZIP_DEFLATED
 import mailattachment
 from cryptography.fernet import Fernet
+import pprint
 
 
 class network_object(object):
@@ -65,7 +66,7 @@ def read_config_file(config_file_name):
             split_line[1]=split_line[1].rstrip('\n')
             #Read files for key and encrypted password and convert values to byte values to be used in decryption later
             if split_line[0] == 'key' or split_line[0] == 'encryptedPassword':
-                readFile = open(parameters[split_line[0]],'r')
+                readFile = open(split_line[1],'r')
                 singleLine = readFile.readline().rstrip('\n')
                 parameters[split_line[0]] = bytes(singleLine,'utf-8')
             elif split_line[0] == 'emailDestination':
@@ -73,6 +74,7 @@ def read_config_file(config_file_name):
             else:
                 parameters[split_line[0]]=split_line[1]
     config_file.close()
+    #pprint.pprint(parameters)
     return parameters
 
 def read_command_file(command_file_name):
