@@ -2,9 +2,7 @@
 #Initially created by Rui on the 6/7/22
 
 - Add the concept of groups to commands and devices. This provides a ways to group type IOS or ASA together and allows different commands to run on the same device type.
-- Change the argument parsing to use module argparse
 - Create a JSON or YAML output option
-- Split output into multiple files for each device
 - Move imported custom modules into same directory
 - Add a help option as input flag and add a help file with the relevant text
 - Put out a warning when trying to run the command without arguments
