@@ -65,10 +65,14 @@ def read_config_file(config_file_name):
         if split_line[0] in parameters:
             split_line[1]=split_line[1].rstrip('\n')
             #Read files for key and encrypted password and convert values to byte values to be used in decryption later
-            if split_line[0] == 'key' or split_line[0] == 'encryptedPassword':
-                readFile = open(split_line[1],'r')
-                singleLine = readFile.readline().rstrip('\n')
-                parameters[split_line[0]] = bytes(singleLine,'utf-8')
+            if (split_line[0] == 'key' or split_line[0] == 'encryptedPassword') and split_line[1] != '':
+                try:
+                    readFile = open(split_line[1],'r')
+                    singleLine = readFile.readline().rstrip('\n')
+                    parameters[split_line[0]] = singleLine.encode()
+                    readFile.close()
+                except Exception as e:
+                    print('Failed to open file containing %s with Exception %s' % (split_line[1],str(e)))
             elif split_line[0] == 'emailDestination':
                 parameters[split_line[0]] = split_line[1].split(',')
             else:
@@ -352,7 +356,10 @@ def main ():
         if adpassword != confirmpassword:
             print('\nPasswords do not match')
             sys.exit()
-    ####These values can only be passed from the configuration file
+    
+    #Need a final check here to see there is a device file, command file and output file.
+
+
     mail_to += configFileOutput['emailDestination']
     abs_path = configFileOutput['absPath']
     try:
@@ -372,12 +379,6 @@ def main ():
 
     ####Read SSH credentials####
     #Basic check to see if a user can enter the same password twice. Doesn't guard against 2 identical wrong inputs (which will lock your AD account when run on multiple devices).
-    '''adpassword = getpass.getpass('Login Password: ')
-    confirmpassword = getpass.getpass('Reconfirm Password: ')
-
-    if adpassword != confirmpassword:
-        print("\nPasswords do not match")
-        sys.exit()'''
 
     ####Logging configuration to troubleshoot netmiko issues####
     if devModeEnable:    
