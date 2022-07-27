@@ -507,6 +507,7 @@ def main ():
             for host in failed_list:
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string         
+        ###ADD BLOCK for handling no output files
         if delete_dir:
             pass
             #os.<delete directory#
@@ -562,7 +563,8 @@ def main ():
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string         
     
-        #Look at zipping the file if it is too large    
+        #Look at zipping the file if it is too large
+        #ADD BLOCK for catching empty output file
         if os.stat(output_file_name).st_size > 5000000 or zip_output is True:
             print("\n\nFile size is greater than 5MB or compress flag set: output file will be compressed")
             try:
