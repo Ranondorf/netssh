@@ -3,7 +3,29 @@ commands=commands.txt
 devices=devices.txt
 output=output.txt
 username=''
+
+#Email Settings
+
 smtpServer=''
 emailSource=''
 emailDestination=''
-commonPath=''
+emailSubject=''
+emailBody=''
+
+#Absolute path variable, not used and may be depracated
+
+absPath=''
+
+#Set zipping the output file
+zipEnable=True
+
+
+#Password information when passoword is not manually entered at runtime
+#Path to file containing decryption key
+key=''
+#Path to file containing encrypted password
+encryptedPassword=''
+
+
+deleteFiles=False
+
