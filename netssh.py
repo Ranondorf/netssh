@@ -3,8 +3,6 @@ import sys
 import os
 import getpass
 from netmiko import ConnectHandler
-#from netmiko.ssh_exception import NetMikoTimeoutException, \
-#    NetMikoAuthenticationException
 from paramiko.ssh_exception import SSHException
 import time
 import math
@@ -127,7 +125,7 @@ def read_command_file(command_file_name):
 def read_device_file(device_file_name):
     devices_file = open(device_file_name,'r')
     hosts = []
-    valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[aruba_os]","[netscaler]","[cisco_nxos]"]
+    valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[aruba_os]","[netscaler]","[cisco_nxos]","[linux]"]
     comment = False
     for line in devices_file:
         hostname=line.rstrip('\n\r\t')
