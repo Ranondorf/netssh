@@ -17,6 +17,7 @@ from zipfile import ZIP_DEFLATED
 import mailattachment
 from cryptography.fernet import Fernet
 import pprint
+import shutil
 
 
 class network_object(object):
@@ -125,7 +126,7 @@ def read_command_file(command_file_name):
 def read_device_file(device_file_name):
     devices_file = open(device_file_name,'r')
     hosts = []
-    valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[aruba_os]","[netscaler]","[cisco_nxos]","[linux]"]
+    valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[netscaler]","[cisco_nxos]","[linux]"]
     comment = False
     for line in devices_file:
         hostname=line.rstrip('\n\r\t')
@@ -256,7 +257,7 @@ def main ():
     config_file_name = 'config.txt'
     devModeEnable = False
     zip_output = ''
-    delete_dir = False
+    delete_output = False
     threadCount = ''
     username = ''
     filter_string = ''
@@ -305,7 +306,7 @@ def main ():
             elif sys.argv[i] == '-z':
                 zip_output = True
             elif sys.argv[i] == '--delete':
-                delete_dir = True
+                delete_output = True
             elif sys.argv[i] == '--subject':
                 i+=1
                 email_subject = sys.argv[i]
@@ -471,6 +472,12 @@ def main ():
 ##################################################
 #Process output if multiple output files required
 ##################################################
+#    When SPLIT is invoked to produce individual output files per device, there are two paths to take. Zipped and unzipped.
+#    If Zip is set:
+#     - then the local dir with the raw files is deleted. But the zip file will remain locally and also emailed.
+#    If zip is not set:
+#     - File will not be emailed, files will not be zipped. Local dir and raw files are kept.
+
 
     elif output_file_name == "SPLIT":
         output_dirpath = abs_path + "output_" + time.strftime("%Y%m%d_%H%M%S") + "/"
@@ -506,22 +513,25 @@ def main ():
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string         
         ###ADD BLOCK for handling no output files
-        if delete_dir:
-            pass
-            #os.<delete directory#
         
         if zip_output:
             output_file_name = zipOutputFile(output_dirpath[:-1],os.listdir(output_dirpath),output_dirpath)
+            try:
+                shutil.rmtree(output_dirpath)
+            except OSError as e:
+                print("Error deleting directory after zipping file. Error: %s - %s." % (e.filename, e.strerror))
             try:
                 mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,[output_file_name],smtpServer)
                 print("\n\nEmail sent")
             except Exception as e:
                 print("\n\nEmail not sent")
                 print(str(e))
-                
-        
-         
-         
+            if delete_output:
+                try:
+                    os.remove(output_file_name)
+                except OSError as e:
+                    print("Error deleting local zip file. Error: %s - %s." % (e.filename, e.strerror))
+                    
 ##################################################
 #Process output if single output file is required
 ##################################################
@@ -582,6 +592,12 @@ def main ():
         except Exception as e:
             print("\n\nEmail not sent")
             print(str(e))
+            
+        if delete_output:
+            try:
+                os.remove(output_file_name)
+            except OSError as e:
+                print("Error deleting local zip file. Error: %s - %s." % (e.filename, e.strerror))          
 
 
     #Generating end of program summary, reusing email body here
@@ -595,8 +611,7 @@ def main ():
     try:
         scriptlogger.add_log_entry(start_time,finish_time,os.path.basename(__file__),username)
     except Exception as e:
-        print("\n\nUnable to write script stats to log file\n")
-        print(str(e))
+        print("\n\nPlease note unable to write script stats to log file: %s\n" % str(e))
     
 
 
