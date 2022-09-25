@@ -23,10 +23,12 @@ import shutil
 class network_object(object):
     hostname = ""
     device_type = ""
+    group = ""
     
-    def __init__(self, hostname, device_type):
+    def __init__(self, hostname, device_type, group):
         self.hostname = hostname
         self.device_type = device_type
+        self.group = group
 
 def pretty_print_hostname (hostname):
 
@@ -128,6 +130,7 @@ def read_device_file(device_file_name):
     hosts = []
     valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[netscaler]","[cisco_nxos]","[linux]"]
     comment = False
+    group = ""
     for line in devices_file:
         hostname=line.rstrip('\n\r\t')
         hostname=hostname.lower()
@@ -142,9 +145,14 @@ def read_device_file(device_file_name):
             #single line comment
         elif hostname in valid_device_types and not comment:
             device_type = hostname.lstrip('[').rstrip(']')
-            #set the device_type as long as the comment flag is false            
+            #set the device_type as long as the comment flag is false
+        elif hostname[0] == '<' and hostname[-1] == '>' and not comment:
+            group = hostname.lstrip('<').rstrip('>')         
         elif not comment:
-            hosts.append(network_object(hostname,device_type))
+            hosts.append(network_object(hostname,device_type,group))
+        else:
+            pass
+            #Presumably comments
     devices_file.close()  
     return hosts
     
@@ -377,6 +385,8 @@ def main ():
         sys.exit()
 
     print("Group testing, forcing premature end")
+    for host in hosts:
+        pprint.pprint(host.hostname + host.device_type + host.group)
     sys.exit()
 
     ####Read SSH credentials####
