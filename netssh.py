@@ -426,6 +426,7 @@ def main ():
     for t in threads:
         t.join()
 
+    processed_hosts = sorted(processed_hosts, key=lambda host: host.hostname)
 
 #######################################
 ########Output processing block########
@@ -437,6 +438,7 @@ def main ():
     if filter_string:
         print("\n\nMatch flag '--find' has been set, no output file will be generated\n")
         ####Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set####
+        ####Change the set to a list here to be consistent with the rest of the program
         for processed_host in processed_hosts:
             if processed_host.result == 'success':     
                 for command in processed_host.outputs:               
