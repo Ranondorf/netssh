@@ -376,6 +376,9 @@ def main ():
         print("\nCould not open input file. IOError with message: %s\n\n" % (str(e)))
         sys.exit()
 
+    print("Group testing, forcing premature end")
+    sys.exit()
+
     ####Read SSH credentials####
     #Basic check to see if a user can enter the same password twice. Doesn't guard against 2 identical wrong inputs (which will lock your AD account when run on multiple devices).
 
