@@ -85,9 +85,12 @@ def read_config_file(config_file_name):
 def read_command_file(command_file_name):
     commands = {}
     commands_file = open(command_file_name,'r')
-    key = ''
+    device_type = ''
+    group = "DEFAULT"
     comment = False
     for line in commands_file:
+        #print(commands)
+        #print(line)
         line = line.rstrip('\n\r\t')
         if not line:
         #Catches blank line    
@@ -97,31 +100,41 @@ def read_command_file(command_file_name):
             comment = not comment
         elif line[0:2] == '//':
             pass
-            #single line comment        
-        elif line[0] == '[' and line[-1] == ']':
+            #single line comment
+        elif line[0] == '<' and line[-1] == '>' and not comment:
+            #print(group)
+            group = line.lstrip('<').rstrip('>')
+            #print("here")
+            if group == "":
+                group = "DEFAULT"
+        elif line[0] == '[' and line[-1] == ']' and not comment:
         #Catches line matching device type, eg ios_xr, netscaler, etc
-            key = line.lstrip('[').rstrip(']')
-            commands[key] = []
+            device_type = line.lstrip('[').rstrip(']')
         elif re.search('con.*\st',line) is not None:
         #Catches conf t and its variants 
            pass
-        elif key == 'netscaler' and re.search('^(unbind|bind|add|rm)',line):
+        elif device_type == 'netscaler' and re.search('^(unbind|bind|add|rm)',line):
         #Catches netscaler config commands
            pass
         elif comment == False:
-        #Should match actual "commands"    
-            if not line in commands[key]:
+            #print("Got in here: %s %s" % (group, device_type))
+        #Should match actual "commands"
+            if group not in commands:
+                commands[group] = {}
+            if device_type not in commands[group]:
+                commands[group][device_type] = []
+            if not line in commands[group][device_type]:
                 #Do nothing, first time command has been seen
                 pass
             else:
                 #handle duplicate commands by appending a number to the end
                 command_count = 2
                 duplicate_line = line
-                while duplicate_line in commands[key]:
+                while duplicate_line in commands[group][device_type]:
                     duplicate_line = line + ' (instance #' + str(command_count) + ')'
                     command_count += 1
                 line = duplicate_line
-            commands[key].append(line)
+            commands[group][device_type].append(line)
     commands_file.close()
     return commands
 
@@ -130,7 +143,7 @@ def read_device_file(device_file_name):
     hosts = []
     valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[netscaler]","[cisco_nxos]","[linux]"]
     comment = False
-    group = ""
+    group = "DEFAULT"
     for line in devices_file:
         hostname=line.rstrip('\n\r\t')
         hostname=hostname.lower()
@@ -147,7 +160,9 @@ def read_device_file(device_file_name):
             device_type = hostname.lstrip('[').rstrip(']')
             #set the device_type as long as the comment flag is false
         elif hostname[0] == '<' and hostname[-1] == '>' and not comment:
-            group = hostname.lstrip('<').rstrip('>')         
+            group = hostname.lstrip('<').rstrip('>')
+            if group == "":
+                group = "DEFAULT"
         elif not comment:
             hosts.append(network_object(hostname,device_type,group))
         else:
@@ -193,12 +208,10 @@ def ssh_command (threadID,q,username,password,commands):
             attempt_number = 1
             max_retries = 3
             process_next_ConnectHandler = False
+            outputs = {}
             #A specific catch needs to be made to see if commandSubset fails
             while not process_next_ConnectHandler and attempt_number < max_retries + 1:
                 try:
-                    outputs = {}
-                    commandSubset = commands[host.device_type]
-                    
                     if devModeEnable:
                         net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,\
                         secret = password, timeout=10, session_log='logs/netmiko_session_output/'+host.hostname+'.log')
@@ -212,7 +225,15 @@ def ssh_command (threadID,q,username,password,commands):
                         host.result = 'fail'
                         host.error = str(e)
                     attempt_number += 1                            
-            if process_next_ConnectHandler:             
+            try:
+                commandSubset = commands[host.group][host.device_type]
+            except Exception as e:
+                print('Failed assigning a list of commands to host %s, group %s and device type %s : %s' % (host.hostname, host.group, host.device_type, str(e)))
+                host.result = 'fail'
+                host.error = str(e)
+                process_next_ConnectHandler = False
+
+            if process_next_ConnectHandler:
                 for command in commandSubset:
                     raw_command = re.sub("\s\(instance\s#[0-9]*\)", '', command)
                     attempt_number = 1
@@ -386,7 +407,8 @@ def main ():
 
     print("Group testing, forcing premature end")
     for host in hosts:
-        pprint.pprint(host.hostname + host.device_type + host.group)
+        pprint.pprint("Hostname: %s Device Type: %s Group name: %s\n\n" % (host.hostname, host.device_type, host.group))
+    pprint.pprint(commands)
     #sys.exit()
 
     ####Read SSH credentials####
