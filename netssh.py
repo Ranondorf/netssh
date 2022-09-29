@@ -387,7 +387,7 @@ def main ():
     print("Group testing, forcing premature end")
     for host in hosts:
         pprint.pprint(host.hostname + host.device_type + host.group)
-    sys.exit()
+    #sys.exit()
 
     ####Read SSH credentials####
     #Basic check to see if a user can enter the same password twice. Doesn't guard against 2 identical wrong inputs (which will lock your AD account when run on multiple devices).
