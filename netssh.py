@@ -1,9 +1,8 @@
 #!/usr/bin/python3
-import sys
 import os
 import getpass
 from netmiko import ConnectHandler
-from paramiko.ssh_exception import SSHException
+#from paramiko.ssh_exception import SSHException
 import time
 import math
 import sys
@@ -30,12 +29,12 @@ class network_object(object):
         self.device_type = device_type
         self.group = group
 
-def pretty_print_hostname (hostname):
+def pretty_print_hostname(hostname):
 
     length = 80
     hashline = ''
     for i in range(length):
-        hashline+=('#')
+        hashline +=('#')
 
     blankline = '#'
     for i in range(length-2):
@@ -57,7 +56,7 @@ def pretty_print_hostname (hostname):
 
 ####Introduce debug flag####
 def read_config_file(config_file_name):
-    parameters = {'commands':'commands.txt','devices':'devices.txt','emailDestination':'','output':'output.txt',\
+    parameters = {'commands':'commands.txt','devices':'devices.txt','emailDestination':'','output':'output.txt',
             'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','zipEnable':'','sitePackagePath':'','emailSubject':'','emailBody':'','key':'','encryptedPassword':''}
     config_file=open(config_file_name,'r')
     for line in config_file:
@@ -89,8 +88,6 @@ def read_command_file(command_file_name):
     group = "DEFAULT"
     comment = False
     for line in commands_file:
-        #print(commands)
-        #print(line)
         line = line.rstrip('\n\r\t')
         if not line:
         #Catches blank line    
@@ -102,9 +99,7 @@ def read_command_file(command_file_name):
             pass
             #single line comment
         elif line[0] == '<' and line[-1] == '>' and not comment:
-            #print(group)
             group = line.lstrip('<').rstrip('>')
-            #print("here")
             if group == "":
                 group = "DEFAULT"
         elif line[0] == '[' and line[-1] == ']' and not comment:
@@ -144,6 +139,7 @@ def read_device_file(device_file_name):
     valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[netscaler]","[cisco_nxos]","[linux]"]
     comment = False
     group = "DEFAULT"
+    device_type = None
     for line in devices_file:
         hostname=line.rstrip('\n\r\t')
         hostname=hostname.lower()
@@ -163,7 +159,7 @@ def read_device_file(device_file_name):
             group = hostname.lstrip('<').rstrip('>')
             if group == "":
                 group = "DEFAULT"
-        elif not comment:
+        elif not comment and device_type:
             hosts.append(network_object(hostname,device_type,group))
         else:
             pass
@@ -213,10 +209,10 @@ def ssh_command (threadID,q,username,password,commands):
             while not process_next_ConnectHandler and attempt_number < max_retries + 1:
                 try:
                     if devModeEnable:
-                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,\
+                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,
                         secret = password, timeout=10, session_log='logs/netmiko_session_output/'+host.hostname+'.log')
                     else:
-                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,\
+                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,
                         secret = password, timeout=10)
                     process_next_ConnectHandler = True
                 except Exception as e:
