@@ -2,7 +2,7 @@
 import os
 import getpass
 from netmiko import ConnectHandler
-#from paramiko.ssh_exception import SSHException
+# from paramiko.ssh_exception import SSHException
 import time
 import math
 import sys
@@ -34,20 +34,20 @@ def pretty_print_hostname(hostname):
     length = 80
     hashline = ''
     for i in range(length):
-        hashline +=('#')
+        hashline += '#'
 
     blankline = '#'
     for i in range(length-2):
-        blankline+=(' ')
-    blankline+= '#'
+        blankline += ' '
+    blankline += '#'
 
     hostline = '#'
     for i in range(int(length/2-1-math.ceil(len(hostname)/2))):
-        hostline+=(' ')
-    hostline+=hostname
+        hostline += ' '
+    hostline += hostname
 
     for i in range(length-len(hostline)-1):
-        hostline+=(' ')
+        hostline += ' '
     hostline += '#'
 
     pretty_hostname = '%s\n%s\n%s\n%s\n%s\n\n\n' % (hashline,blankline,hostline,blankline,hashline)
@@ -56,73 +56,73 @@ def pretty_print_hostname(hostname):
 
 ####Introduce debug flag####
 def read_config_file(config_file_name):
-    parameters = {'commands':'commands.txt','devices':'devices.txt','emailDestination':'','output':'output.txt',
-            'username':'','smtpServer':'','emailSource':'','absPath':'','devModeEnable':'','zipEnable':'','sitePackagePath':'','emailSubject':'','emailBody':'','key':'','encryptedPassword':''}
-    config_file=open(config_file_name,'r')
+    parameters = {'commands': 'commands.txt', 'devices': 'devices.txt', 'emailDestination': '', 'output': 'output.txt',
+            'username': '', 'smtpServer': '', 'emailSource': '', 'absPath': '', 'devModeEnable': '', 'zipEnable': '', 'sitePackagePath': '', 'emailSubject': '', 'emailBody': '', 'key': '', 'encryptedPassword': ''}
+    config_file = open(config_file_name, 'r')
     for line in config_file:
         split_line = line.split('=')
         ####Work in a try block here
         if split_line[0] in parameters:
-            split_line[1]=split_line[1].rstrip('\n')
+            split_line[1] = split_line[1].rstrip('\n')
             #Read files for key and encrypted password and convert values to byte values to be used in decryption later
             if (split_line[0] == 'key' or split_line[0] == 'encryptedPassword') and split_line[1] != '':
                 try:
-                    readFile = open(split_line[1],'r')
+                    readFile = open(split_line[1], 'r')
                     singleLine = readFile.readline().rstrip('\n')
                     parameters[split_line[0]] = singleLine.encode()
                     readFile.close()
                 except Exception as e:
-                    print('Failed to open file containing %s with Exception %s' % (split_line[1],str(e)))
+                    print('Failed to open file containing %s with Exception %s' % (split_line[1], str(e)))
             elif split_line[0] == 'emailDestination':
                 parameters[split_line[0]] = split_line[1].split(',')
             else:
-                parameters[split_line[0]]=split_line[1]
+                parameters[split_line[0]] = split_line[1]
     config_file.close()
     #pprint.pprint(parameters)
     return parameters
 
 def read_command_file(command_file_name):
     commands = {}
-    commands_file = open(command_file_name,'r')
+    commands_file = open(command_file_name, 'r')
     device_type = ''
     group = "DEFAULT"
     comment = False
     for line in commands_file:
         line = line.rstrip('\n\r\t')
         if not line:
-        #Catches blank line    
+            # Catches blank line
             pass
         elif line[0] == '#':
-            #Any lines enclosed by '#' is considered to be in a comment block
+            # Any lines enclosed by '#' is considered to be in a comment block
             comment = not comment
         elif line[0:2] == '//':
             pass
-            #single line comment
+            # single line comment
         elif line[0] == '<' and line[-1] == '>' and not comment:
             group = line.lstrip('<').rstrip('>')
             if group == "":
                 group = "DEFAULT"
         elif line[0] == '[' and line[-1] == ']' and not comment:
-        #Catches line matching device type, eg ios_xr, netscaler, etc
+            # Catches line matching device type, eg ios_xr, netscaler, etc
             device_type = line.lstrip('[').rstrip(']')
-        elif re.search('con.*\st',line) is not None:
-        #Catches conf t and its variants 
-           pass
-        elif device_type == 'netscaler' and re.search('^(unbind|bind|add|rm)',line):
-        #Catches netscaler config commands
-           pass
+        elif re.search('con.*\st', line) is not None:
+            # Catches conf t and its variants
+            pass
+        elif device_type == 'netscaler' and re.search('^(unbind|bind|add|rm)', line):
+            # Catches netscaler config commands
+            pass
         elif comment == False:
-            #print("Got in here: %s %s" % (group, device_type))
-        #Should match actual "commands"
+            # print("Got in here: %s %s" % (group, device_type))
+            # Should match actual "commands"
             if group not in commands:
                 commands[group] = {}
             if device_type not in commands[group]:
                 commands[group][device_type] = []
             if not line in commands[group][device_type]:
-                #Do nothing, first time command has been seen
+                # Do nothing, first time command has been seen
                 pass
             else:
-                #handle duplicate commands by appending a number to the end
+                # handle duplicate commands by appending a number to the end
                 command_count = 2
                 duplicate_line = line
                 while duplicate_line in commands[group][device_type]:
@@ -134,15 +134,15 @@ def read_command_file(command_file_name):
     return commands
 
 def read_device_file(device_file_name):
-    devices_file = open(device_file_name,'r')
+    devices_file = open(device_file_name, 'r')
     hosts = []
-    valid_device_types = ["[cisco_asa]","[cisco_ios]","[cisco_xe]","[cisco_xr]","[netscaler]","[cisco_nxos]","[linux]"]
+    valid_device_types = ["[cisco_asa]", "[cisco_ios]", "[cisco_xe]", "[cisco_xr]", "[netscaler]", "[cisco_nxos]", "[linux]"]
     comment = False
     group = "DEFAULT"
     device_type = None
     for line in devices_file:
-        hostname=line.rstrip('\n\r\t')
-        hostname=hostname.lower()
+        hostname = line.rstrip('\n\r\t')
+        hostname = hostname.lower()
         if not hostname:
             pass
             #Catches blank line
@@ -160,7 +160,7 @@ def read_device_file(device_file_name):
             if group == "":
                 group = "DEFAULT"
         elif not comment and device_type:
-            hosts.append(network_object(hostname,device_type,group))
+            hosts.append(network_object(hostname, device_type, group))
         else:
             pass
             #Presumably comments
@@ -168,21 +168,21 @@ def read_device_file(device_file_name):
     return hosts
     
 
-def zipOutputFile (output_file_name,raw_output_files,path=''):
+def zipOutputFile (output_file_name, raw_output_files, path=''):
     zipped_output_file = output_file_name + '.zip'
-    zippedOutputFile = ZipFile(zipped_output_file,mode="w",compression=ZIP_DEFLATED)
+    zippedOutputFile = ZipFile(zipped_output_file, mode="w", compression=ZIP_DEFLATED)
     for raw_output_file in raw_output_files:
         try:    
-            zippedOutputFile.write(path + raw_output_file,raw_output_file)
+            zippedOutputFile.write(path + raw_output_file, raw_output_file)
         except Exception as e:
             print("Writing to zipfile failed with error: %s" % (str(e)))
     zippedOutputFile.close()
-    os.chmod(zipped_output_file,0o666)
+    os.chmod(zipped_output_file, 0o666)
     return zipped_output_file
 
 
 class myThread (threading.Thread):
-   def __init__(self, threadID,q,username,password,commands):
+   def __init__(self, threadID, q, username, password, commands):
       threading.Thread.__init__(self)
       self.threadID = threadID
       self.username = username
@@ -195,7 +195,7 @@ class myThread (threading.Thread):
       print("Ending thread ID:  "+str(self.threadID))
 
 ##########Look at introducing 3 attempts per host#############
-def ssh_command (threadID,q,username,password,commands):
+def ssh_command(threadID,q,username,password,commands):
     while not exitFlag:
         queueLock.acquire()
         if not workQueue.empty():
@@ -210,10 +210,10 @@ def ssh_command (threadID,q,username,password,commands):
                 try:
                     if devModeEnable:
                         net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,
-                        secret = password, timeout=10, session_log='logs/netmiko_session_output/'+host.hostname+'.log')
+                        secret=password, timeout=10, session_log='logs/netmiko_session_output/'+host.hostname+'.log')
                     else:
                         net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,
-                        secret = password, timeout=10)
+                        secret=password, timeout=10)
                     process_next_ConnectHandler = True
                 except Exception as e:
                     print('%s failed on login attempt %s' % (host.hostname, attempt_number))
@@ -265,11 +265,11 @@ def ssh_command (threadID,q,username,password,commands):
             queueLock.release()
 
 def main ():
-    #Script start time
+    # Script start time
     start_time = time.time()
 
 
-    #Variable initializations. Only 2 variables are assigned here. Core input variables are set in read_config_file.
+    # Variable initializations. Only 2 variables are assigned here. Core input variables are set in read_config_file.
     global exitFlag
     global workQueue
     global queueLock
@@ -295,36 +295,36 @@ def main ():
     passed_list = []
     match_set = set()
 
-    ####Block for parsing command line args####
-    #Parse none default arguements to the program and use those instead of the default file names
+    # Block for parsing command line args####
+    # Parse none default arguements to the program and use those instead of the default file names
     # -o specifes the output file, -u the username, -m to match a string, -s to specify an email target, -c the command file and -d the device file. Order does not matter.
  
 
     if len(sys.argv) > 1:
-        for i in range(1,len(sys.argv)):
+        for i in range(1, len(sys.argv)):
             if sys.argv[i] == '-c':
-                i+=1
+                i += 1
                 command_file_name = sys.argv[i]
             elif sys.argv[i] == '-d':
-                i+=1
+                i += 1
                 device_file_name = sys.argv[i]
             elif sys.argv[i] == '-o':
-                i+=1
+                i += 1
                 output_file_name = sys.argv[i]
             elif sys.argv[i] == '--find':
-                i+=1
+                i += 1
                 filter_string = sys.argv[i]
             elif sys.argv[i] == '-u':
-                i+=1
+                i += 1
                 username = sys.argv[i]
             elif sys.argv[i] == '-s':
-                i+=1
+                i += 1
                 mail_to.append(sys.argv[i])
             elif sys.argv[i] == '-f':
-                i+=1
+                i += 1
                 config_file_name = sys.argv[i]
             elif sys.argv[i] == '-t':
-                i+=1
+                i += 1
                 threadCount = int(sys.argv[i])
             elif sys.argv[i] == '-D':
                 devModeEnable = True
@@ -333,20 +333,20 @@ def main ():
             elif sys.argv[i] == '--delete':
                 delete_output = True
             elif sys.argv[i] == '--subject':
-                i+=1
+                i += 1
                 email_subject = sys.argv[i]
             elif sys.argv[i] == '--body':
-                i+=1
+                i += 1
                 email_body = sys.argv[i] + '\n\n'
 
                     
-    ####Remove try block####
+    # Remove try block
     try:
         configFileOutput = read_config_file(config_file_name)
     except Exception as e:
         print("Configuration file failed to open with this message: %s" % (str(e)))
         
-    #configFileOutput will pass defaults if the configuration file is not found
+    # configFileOutput will pass defaults if the configuration file is not found
     if not command_file_name:
        command_file_name = configFileOutput['commands']
     if not device_file_name:
@@ -370,7 +370,7 @@ def main ():
             zip_output = False
     emailSource = configFileOutput['emailSource']
     smtpServer = configFileOutput['smtpServer']
-    #Check to see if encrypted password can be read from file
+    # Check to see if encrypted password can be read from file
     if configFileOutput['key']:
         fnet_key = Fernet(configFileOutput['key'])
         adpassword = fnet_key.decrypt(configFileOutput['encryptedPassword']).decode()
@@ -381,14 +381,14 @@ def main ():
             print('\nPasswords do not match')
             sys.exit()
     
-    #Need a final check here to see there is a device file, command file and output file.
+    # Need a final check here to see there is a device file, command file and output file.
 
 
     mail_to += configFileOutput['emailDestination']
     abs_path = configFileOutput['absPath']
     try:
         import scriptlogger
-        #import mailattachment
+        # import mailattachment
     except Exception as e:
         print("\nCould not import mail and script stat files. Program will continue without these options.")
 
@@ -396,7 +396,7 @@ def main ():
     try:
         commands = read_command_file(command_file_name)
         hosts = read_device_file(device_file_name)         
-        #output_file = open(output_file_name,'w')
+        # output_file = open(output_file_name,'w')
     except IOError as e:
         print("\nCould not open input file. IOError with message: %s\n\n" % (str(e)))
         sys.exit()
@@ -405,12 +405,12 @@ def main ():
     for host in hosts:
         pprint.pprint("Hostname: %s Device Type: %s Group name: %s\n\n" % (host.hostname, host.device_type, host.group))
     pprint.pprint(commands)
-    #sys.exit()
+    # sys.exit()
 
-    ####Read SSH credentials####
-    #Basic check to see if a user can enter the same password twice. Doesn't guard against 2 identical wrong inputs (which will lock your AD account when run on multiple devices).
+    # Read SSH credentials
+    # Basic check to see if a user can enter the same password twice. Doesn't guard against 2 identical wrong inputs (which will lock your AD account when run on multiple devices).
 
-    ####Logging configuration to troubleshoot netmiko issues####
+    # Logging configuration to troubleshoot netmiko issues
     if devModeEnable:    
         '''logging.basicConfig(filename='logs/netmiko_debug.log', level=logging.DEBUG)
         logger = logging.getLogger("netmiko")'''
@@ -419,9 +419,9 @@ def main ():
 
     print("\n\nAttempting connecting to hosts:\n\n")
 
-    ####Multithreading block of code####
+    # Multithreading block of code
     
-    ##Set the number of threads if value has not been passed from CLI
+    # Set the number of threads if value has not been passed from CLI
     if not threadCount:
         threadCount = len(hosts)
         if threadCount > 100:
@@ -436,8 +436,8 @@ def main ():
     threads = []
  
 
-#create actual threads from thread names. myThread gets the SSH command executed
-    for threadID in range(1,threadCount+1):
+    # create actual threads from thread names. myThread gets the SSH command executed
+    for threadID in range(1, threadCount+1):
         thread = myThread(threadID, workQueue, username, adpassword, commands)
         thread.start()
         threads.append(thread)
@@ -446,7 +446,7 @@ def main ():
 
     for host in hosts:
         workQueue.put(host)
-    #This clears hosts for the next bit. Might be better to rename this processed_hosts
+    # This clears hosts for the next bit. Might be better to rename this processed_hosts
 
     queueLock.release()
 
@@ -468,8 +468,8 @@ def main ():
 ######################################
     if filter_string:
         print("\n\nMatch flag '--find' has been set, no output file will be generated\n")
-        ####Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set####
-        ####Change the set to a list here to be consistent with the rest of the program
+        # Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set
+        # Change the set to a list here to be consistent with the rest of the program
         for processed_host in processed_hosts:
             if processed_host.result == 'success':     
                 for command in processed_host.outputs:               
@@ -477,8 +477,8 @@ def main ():
                         match_set.add(processed_host.hostname)
                     else:
                         pass
-                        #No match
-                        ####Hosts that failed are appended to a list#####
+                        # No match
+                        # Hosts that failed are appended to a list
             elif processed_host.result == 'fail':
                 failed_list.append(processed_host)
         if len(match_set) != 0:
@@ -502,14 +502,14 @@ def main ():
             print(str(e))
 
 
-##################################################
-#Process output if multiple output files required
-##################################################
-#    When SPLIT is invoked to produce individual output files per device, there are two paths to take. Zipped and unzipped.
-#    If Zip is set:
-#     - then the local dir with the raw files is deleted. But the zip file will remain locally and also emailed.
-#    If zip is not set:
-#     - File will not be emailed, files will not be zipped. Local dir and raw files are kept.
+    # #################################################
+    # Process output if multiple output files required
+    # #################################################
+    #    When SPLIT is invoked to produce individual output files per device, there are two paths to take. Zipped and unzipped.
+    #    If Zip is set:
+    #     - then the local dir with the raw files is deleted. But the zip file will remain locally and also emailed.
+    #    If zip is not set:
+    #     - File will not be emailed, files will not be zipped. Local dir and raw files are kept.
 
 
     elif output_file_name == "SPLIT":
@@ -538,7 +538,7 @@ def main ():
         if len(passed_list) != 0:
             passed_list_string = "\n\nCommand was successful on the following devices:\n\n"
             for host in passed_list:
-               passed_list_string += "%s\n" % (host.hostname)
+               passed_list_string += "%s\n" % host.hostname
             email_body += passed_list_string
         if len(failed_list) != 0:
             failed_list_string = "\n\nCommand failed on the following devices with error messages:\n\n"
@@ -615,12 +615,12 @@ def main ():
             except Exception as e:
                 print("\n\nUnable to compress file")
                 print("Error generated is: "+str(e))
-                #Unset mail_to prevent email being sent
+                # Unset mail_to prevent email being sent
                 mail_to = [] 
-        #os.chmod(output_file_name,0o666)
+            # os.chmod(output_file_name,0o666)
 
         try:
-            mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,[output_file_name],smtpServer)
+            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent")
@@ -633,14 +633,14 @@ def main ():
                 print("Error deleting local zip file. Error: %s - %s." % (e.filename, e.strerror))          
 
 
-    #Generating end of program summary, reusing email body here
+    # Generating end of program summary, reusing email body here
     print(email_body)
     
 
     finish_time = time.time()
     print("\n\nScript execution time is %s seconds\n" % str(finish_time - start_time))
     
-    #Try and log script execution stats to log file#
+    # Try and log script execution stats to log file#
     try:
         scriptlogger.add_log_entry(start_time,finish_time,os.path.basename(__file__),username)
     except Exception as e:
