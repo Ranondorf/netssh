@@ -19,8 +19,6 @@ Note: At this point in time, configuration commands are not supported. Only work
 - Relies on Python modules that can be installed via PIP (Netmiko being the main one). Python3 is required.
 ### Installing Program
 Clone this GIT repo to a directory on the local machine. However when calling the script call it from a separate folder. Copy ouput, devices, commands and config files to the calling folder.
-## History
-TODO: Write history
 ## Credits
 Ruwan Samaranayake
 ## License
