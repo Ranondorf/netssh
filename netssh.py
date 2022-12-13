@@ -630,7 +630,7 @@ def main ():
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent")
-            print(str(e))
+            print("Error message: " + str(e))
             
         if delete_output:
             try:
