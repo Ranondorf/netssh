@@ -1,14 +1,27 @@
 # netssh
-Script for SSHing into network devices.
-Features:
-- Handles lists of various device types as input
-- Hanles differing lists of commands for different device types
-- Can output as a single file or multiple files
-- Output files can be zipped
-- Output files can be emailed to multiple recipients
-- Has a matching function where you can search for a string within a device
-- Some broken features such as debug mode.
-- Upcoming works are in the REQUESTS.txt
-- Strongly recommend running this program from a different directory (i.e not the actual directory as the .py files). This allows you to keep you input and output files without cluttering thing up.
-- There are default values assigned, but for ease of use, use the configuration file.
-- Work in progress.
+Script for interrogating network devices via SSH very quickly (1000's of devices in minutes).
+
+Key Features:
+- Using a list of devices with associated commands, retrieve consolidated output
+- Special feature allows for string searching across multiple devices
+- Supports Cisco ASA, IOS, IOS-XE, IOS-XR, NX-OS; Netscaler and Linux
+- Single thread or Multi-threaded mode
+- Allows running multiple commands against different device groups
+- Output into single file or multiple files per device. Zipped files supported
+- Unauthenticated email of output supported via SMTP server
+- Customizable script calls via CLI arguments and/or configuration file
+- If using saved passwords (eg when used in conjunction with Crontab), they are stored encrypted.
+
+Note: At this point in time, configuration commands are not supported. Only works on systems that use the "/" file seperator, i.e Windows not supported at this point in time.
+
+## Installation
+### Prequisites
+- Relies on Python modules that can be installed via PIP (Netmiko being the main one). Python3 is required.
+### Installing Program
+Clone this GIT repo to a directory on the local machine. However when calling the script call it from a separate folder. Copy ouput, devices, commands and config files to the calling folder.
+## History
+TODO: Write history
+## Credits
+Ruwan Samaranayake
+## License
+Refer to license file in repository

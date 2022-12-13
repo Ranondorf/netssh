@@ -1,12 +1,12 @@
-#This file is log of program improvements
-#Initially created by Rui on the 6/7/22
+# This file is log of program improvements
+# Initially created by Rui on the 13/12/22
 
-- Add the concept of groups to commands and devices. This provides a ways to group type IOS or ASA together and allows different commands to run on the same device type.
 - Create a JSON or YAML output option
 - Move imported custom modules into same directory
 - Add a help option as input flag and add a help file with the relevant text
 - Put out a warning when trying to run the command without arguments
 - Change the way '-m' flag works
-- Change the code so it can be imported as a module.
+- Change the code so it can be imported as a module
 - Add the ability to specify run overrides as arguments (i.e specify devices and commands on the CLI)
+- Add email authentication option
 - Add the ability to make the output to be passed as a data construct (rather than being put in a file).
