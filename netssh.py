@@ -63,7 +63,7 @@ def read_config_file(config_file_name):
         if split_line[0] in parameters:
             split_line[1] = split_line[1].rstrip('\n')
             # Read files for key and encrypted password and convert values to byte values to be used in decryption later
-            if (split_line[0] == 'key' or split_line[0] == 'encryptedPassword') and split_line[1] != '':
+            if (split_line[0] == 'key' or split_line[0] == 'encryptedPassword') and split_line[1] != "''":
                 try:
                     read_file = open(split_line[1], 'r')
                     single_line = read_file.readline().rstrip('\n')
@@ -375,7 +375,7 @@ def main ():
     emailSource = configFileOutput['emailSource']
     smtpServer = configFileOutput['smtpServer']
     # Check to see if encrypted password can be read from file
-    if configFileOutput['key']:
+    if configFileOutput['key'] != "''":
         fnet_key = Fernet(configFileOutput['key'])
         ad_password = fnet_key.decrypt(configFileOutput['encryptedPassword']).decode()
     else:
