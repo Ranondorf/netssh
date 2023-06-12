@@ -11,7 +11,7 @@ import threading
 import paramiko
 from zipfile import ZipFile
 from zipfile import ZIP_DEFLATED
-import mailattachment
+# import mailattachment <-- This import is moved to a try block further down
 from cryptography.fernet import Fernet
 import pprint
 import shutil
@@ -27,8 +27,8 @@ class NetworkObject(object):
         self.device_type = device_type
         self.group = group
 
-def pretty_print_hostname(hostname):
 
+def pretty_print_hostname(hostname):
     length = 80
     hash_line = ''
     for i in range(length):
@@ -53,9 +53,12 @@ def pretty_print_hostname(hostname):
     return pretty_hostname
 
 # ###Introduce debug flag####
+
+
 def read_config_file(config_file_name):
     parameters = {'commands': 'commands.txt', 'devices': 'devices.txt', 'emailDestination': '', 'output': 'output.txt',
-            'username': '', 'smtpServer': '', 'emailSource': '', 'absPath': '', 'devModeEnable': '', 'zipEnable': '', 'sitePackagePath': '', 'emailSubject': '', 'emailBody': '', 'key': '', 'encryptedPassword': '', 'threadCount': ''}
+                  'username': '', 'smtpServer': '', 'emailSource': '', 'absPath': '', 'devModeEnable': '', 'zipEnable': '',
+                  'sitePackagePath': '', 'emailSubject': '', 'emailBody': '', 'key': '', 'encryptedPassword': '', 'threadCount': ''}
     config_file = open(config_file_name, 'r')
     for line in config_file:
         split_line = line.split('=')
@@ -78,6 +81,7 @@ def read_config_file(config_file_name):
     config_file.close()
     # pprint.pprint(parameters)
     return parameters
+
 
 def read_command_file(command_file_name):
     commands = {}
@@ -109,7 +113,7 @@ def read_command_file(command_file_name):
         elif device_type == 'netscaler' and re.search('^(unbind|bind|add|rm)', line):
             # Catches netscaler config commands
             pass
-        elif comment == False:
+        elif not comment:
             # print("Got in here: %s %s" % (group, device_type))
             # Should match actual "commands"
             if group not in commands:
@@ -143,16 +147,16 @@ def read_device_file(device_file_name):
         hostname = hostname.lower()
         if not hostname:
             pass
-            #Catches blank line
+            # Catches blank line
         elif hostname[0] == '#':
-            #Any lines enclosed by '#' is considered to be in a comment block
+            # Any lines enclosed by '#' is considered to be in a comment block
             comment = not comment
         elif hostname[0:2] == '//':
             pass
-            #single line comment
+            # single line comment
         elif hostname in valid_device_types and not comment:
             device_type = hostname.lstrip('[').rstrip(']')
-            #set the device_type as long as the comment flag is false
+            # set the device_type as long as the comment flag is false
         elif hostname[0] == '<' and hostname[-1] == '>' and not comment:
             group = hostname.lstrip('<').rstrip('>')
             if group == "":
@@ -166,32 +170,32 @@ def read_device_file(device_file_name):
     return hosts
     
 
-def zip_output_file (output_file_name, raw_output_files, path=''):
-    zipped_output_file = output_file_name + '.zip'
-    zippedOutputFile = ZipFile(zipped_output_file, mode="w", compression=ZIP_DEFLATED)
+def zip_output_file(output_file_name, raw_output_files, path=''):
+    zipped_output_file_name = output_file_name + '.zip'
+    zipped_output_file = ZipFile(zipped_output_file_name, mode="w", compression=ZIP_DEFLATED)
     for raw_output_file in raw_output_files:
         try:    
-            zippedOutputFile.write(path + raw_output_file, raw_output_file)
+            zipped_output_file.write(path + raw_output_file, raw_output_file)
         except Exception as e:
             print("Writing to zipfile failed with error: %s" % (str(e)))
-    zippedOutputFile.close()
-    os.chmod(zipped_output_file, 0o666)
-    return zipped_output_file
+    zipped_output_file.close()
+    os.chmod(zipped_output_file_name, 0o666)
+    return zipped_output_file_name
 
 
 class MyThread (threading.Thread):
-   def __init__(self, threadID, q, username, password, commands):
-      threading.Thread.__init__(self)
-      self.threadID = threadID
-      self.username = username
-      self.q = q
-      self.password = password
-      self.commands = commands
+    def __init__(self, threadID, q, username, password, commands):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.username = username
+        self.q = q
+        self.password = password
+        self.commands = commands
 
-   def run(self):
-      print("Starting thread ID:  "+str(self.threadID))
-      ssh_command(self.threadID,self.q,self.username,self.password,self.commands)
-      print("Ending thread ID:  "+str(self.threadID))
+    def run(self):
+        print("Starting thread ID:  "+str(self.threadID))
+        ssh_command(self.threadID,self.q,self.username,self.password,self.commands)
+        print("Ending thread ID:  "+str(self.threadID))
 
 ##########Look at introducing 3 attempts per host#############
 def ssh_command(threadID,q,username,password,commands):
