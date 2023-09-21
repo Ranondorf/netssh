@@ -11,11 +11,11 @@ import threading
 import paramiko
 from zipfile import ZipFile
 from zipfile import ZIP_DEFLATED
-# import mailattachment <-- This import is moved to a try block further down
 from cryptography.fernet import Fernet
 import pprint
 import shutil
-
+import scriptlogger
+import mailattachment
 
 class NetworkObject(object):
     hostname = ""
@@ -58,7 +58,7 @@ def pretty_print_hostname(hostname):
 def read_config_file(config_file_name):
     parameters = {'commands': 'commands.txt', 'devices': 'devices.txt', 'emailDestination': '', 'output': 'output.txt',
                   'username': '', 'smtpServer': '', 'emailSource': '', 'absPath': '', 'devModeEnable': '', 'zipEnable': '',
-                  'sitePackagePath': '', 'emailSubject': '', 'emailBody': '', 'key': '', 'encryptedPassword': '', 'threadCount': ''}
+                  'sitePackagePath': '', 'emailSubject': '', 'emailBody': '', 'key': '', 'encryptedPassword': '', 'threadCount': '', 'emailUsername': '', 'emailKey': '', 'emailEncryptedPassword': '', 'smtpPort': ''}
     config_file = open(config_file_name, 'r')
     for line in config_file:
         split_line = line.split('=')
@@ -66,7 +66,7 @@ def read_config_file(config_file_name):
         if split_line[0] in parameters:
             split_line[1] = split_line[1].rstrip('\n')
             # Read files for key and encrypted password and convert values to byte values to be used in decryption later
-            if (split_line[0] == 'key' or split_line[0] == 'encryptedPassword') and split_line[1] != "''":
+            if (split_line[0] == 'key' or split_line[0] == 'encryptedPassword' or split_line[0] == 'emailKey' or split_line[0] == 'emailEncryptedPassword') and split_line[1] != "''":
                 try:
                     read_file = open(split_line[1], 'r')
                     single_line = read_file.readline().rstrip('\n')
@@ -292,6 +292,8 @@ def main ():
     mail_to = []
     email_body = ''
     email_subject = ''
+    email_username = ''
+    smtpPort = ''
     abs_path = ''
     processed_hosts = []
     failed_list = []
@@ -362,6 +364,10 @@ def main ():
         email_subject = 'Output File for script: %s' % os.path.basename(__file__)
     if not email_body:
         email_body = configFileOutput['emailBody']
+    if not smtpPort:
+        smtpPort = configFileOutput['smtpPort']
+    if not email_username:
+        email_username = configFileOutput['emailUsername']
     if not threadCount:
         try:
             threadCount = int(configFileOutput['threadCount'])
@@ -378,6 +384,10 @@ def main ():
             zip_output = False
     emailSource = configFileOutput['emailSource']
     smtpServer = configFileOutput['smtpServer']
+    # Check to see if mail passwords are set: ie, secure SMTP server authentication
+    if configFileOutput['emailKey'] != "''":
+        fnet_key = Fernet(configFileOutput['emailKey'])
+        email_password = fnet_key.decrypt(configFileOutput['emailEncryptedPassword']).decode()
     # Check to see if encrypted password can be read from file
     if configFileOutput['key'] != "''":
         fnet_key = Fernet(configFileOutput['key'])
@@ -394,11 +404,6 @@ def main ():
 
     mail_to += configFileOutput['emailDestination']
     abs_path = configFileOutput['absPath']
-    try:
-        import scriptlogger
-        import mailattachment
-    except Exception as e:
-        print("\nCould not import mail and script stat files. Program will continue without these options.")
 
 
     try:
@@ -409,11 +414,6 @@ def main ():
         print("\nCould not open input file. IOError with message: %s\n\n" % (str(e)))
         sys.exit()
 
-    print("Group testing, forcing premature end")
-    for host in hosts:
-        pprint.pprint("Hostname: %s Device Type: %s Group name: %s\n\n" % (host.hostname, host.device_type, host.group))
-    pprint.pprint(commands)
-    # sys.exit()
 
     # Read SSH credentials
     # Basic check to see if a user can enter the same password twice. Doesn't guard against 2 identical wrong inputs (which will lock your AD account when run on multiple devices).
@@ -473,9 +473,7 @@ def main ():
 ######################################
 #Process output if filter flag set
 ######################################
-    '''for processed_host in processed_hosts:
-        print(processed_host.hostname)
-        print(processed_host.outputs)'''
+
 
     if filter_string:
         print("\n\nMatch flag '--find' has been set, no output file will be generated\n")
@@ -506,7 +504,7 @@ def main ():
             email_body += failed_list_string
 
         try:
-            mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,None,smtpServer)
+            mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,None,smtpServer,smtpPort,email_username,email_password)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent")
@@ -565,7 +563,7 @@ def main ():
             except OSError as e:
                 print("Error deleting directory after zipping file. Error: %s - %s." % (e.filename, e.strerror))
             try:
-                mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,[output_file_name],smtpServer)
+                mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,[output_file_name],smtpServer,smtpPort,email_username,email_password)
                 print("\n\nEmail sent")
             except Exception as e2:
                 print("\n\nEmail not sent")
@@ -630,7 +628,7 @@ def main ():
             # os.chmod(output_file_name,0o666)
 
         try:
-            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer)
+            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtpPort, email_username, email_password)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent")
@@ -651,6 +649,7 @@ def main ():
     print("\n\nScript execution time is %s seconds\n" % str(finish_time - start_time))
     
     # Try and log script execution stats to log file#
+    
     try:
         scriptlogger.add_log_entry(start_time,finish_time,os.path.basename(__file__),username)
     except Exception as e:

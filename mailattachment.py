@@ -7,11 +7,10 @@ from email.utils import COMMASPACE, formatdate
 
 
 def send_mail(send_from, send_to, subject, text, files=None,
-              server="127.0.0.1"):
+              server="127.0.0.1", port=25, username=None, password=None):
 
     assert isinstance(send_to, list)
 
-  
 
     msg = MIMEMultipart()
     msg['From'] = send_from
@@ -32,6 +31,10 @@ def send_mail(send_from, send_to, subject, text, files=None,
         msg.attach(part)
 
 
-    smtp = smtplib.SMTP(server)
+    smtp = smtplib.SMTP(server, port)
+    # Check if username is set, enables TLS if username is detected
+    if username:
+        smtp.starttls()
+        smtp.login(username, password)
     smtp.sendmail(send_from, send_to, msg.as_string())
     smtp.close()
