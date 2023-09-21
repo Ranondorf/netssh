@@ -650,10 +650,10 @@ def main ():
     
     # Try and log script execution stats to log file#
     
-    try:
+    '''try:
         scriptlogger.add_log_entry(start_time,finish_time,os.path.basename(__file__),username)
     except Exception as e:
-        print("\n\nPlease note unable to write script stats to log file: %s\n" % str(e))
+        print("\n\nPlease note unable to write script stats to log file: %s\n" % str(e))'''
     
 
 
