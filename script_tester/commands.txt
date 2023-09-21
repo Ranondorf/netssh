@@ -1,4 +1,4 @@
 [linux]
-date
+echo "This is a test command"
 <monkey>
-ls
+echo "This is another command"
