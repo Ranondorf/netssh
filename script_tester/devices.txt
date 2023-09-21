@@ -1,0 +1,5 @@
+[linux]
+alias1
+<monkey>
+alias2
+alias3
