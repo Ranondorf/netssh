@@ -14,8 +14,8 @@ from zipfile import ZIP_DEFLATED
 from cryptography.fernet import Fernet
 import pprint
 import shutil
-import scriptlogger
-import mailattachment
+import common.scriptlogger as scriptlogger
+import common.mailattachment as mailattachment
 
 class NetworkObject(object):
     hostname = ""
@@ -385,11 +385,11 @@ def main ():
     emailSource = configFileOutput['emailSource']
     smtpServer = configFileOutput['smtpServer']
     # Check to see if mail passwords are set: ie, secure SMTP server authentication
-    if configFileOutput['emailKey'] != "''":
+    if configFileOutput['emailKey'] != '':
         fnet_key = Fernet(configFileOutput['emailKey'])
         email_password = fnet_key.decrypt(configFileOutput['emailEncryptedPassword']).decode()
     # Check to see if encrypted password can be read from file
-    if configFileOutput['key'] != "''":
+    if configFileOutput['key'] != '':
         fnet_key = Fernet(configFileOutput['key'])
         ad_password = fnet_key.decrypt(configFileOutput['encryptedPassword']).decode()
     else:
