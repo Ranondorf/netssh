@@ -1,0 +1,48 @@
+#################################################################
+
+The minimal requirements for a script to run are
+1) device file
+2) command file
+3) output file
+4) username
+5) password
+
+#################################################################
+
+
+Script - Variable Declaration
+
+sets config_file_name as "config.txt"
+sets dev mode enalbe as False
+sets delete_output as False
+
+- Nothing else is set
+
+
+
+
+#################################################################
+
+
+Config File settings
+
+config file must set:
+1) device file
+2) command file
+3) output file
+
+
+
+
+############################################################
+
+
+RunTime override
+
+- This section should override any of the previous
+
+
+Flags
+-f sets a new config file
+
+
