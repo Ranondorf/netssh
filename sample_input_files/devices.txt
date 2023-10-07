@@ -1,0 +1,12 @@
+//Sample config, this is a single line comment. The alternative is a multiline comment block which is what the config below is encapsulated in with the use of #
+//The program checks the first position for // or # to recognize comments. Remove the # tags to allow commands to be run against the hosts below
+#
+[linux]
+alias1
+alias2
+alias3
+[cisco_asa]
+192.168.30.32
+host1
+host2
+#

@@ -1,0 +1,9 @@
+//Sample config, this is a single line comment. The alternative is a multiline comment block which is what the config below is encapsulated in with the use of #
+//The program checks the first position for // or # to recognize comments. Remove the # tags to run the following commands on the given OS types.
+#[linux]
+date
+ifconfig
+[cisco_asa]
+show version
+sh nameif
+#
