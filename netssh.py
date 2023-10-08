@@ -59,7 +59,11 @@ def read_config_file(config_file_name):
     parameters = {'commands': 'commands.txt', 'devices': 'devices.txt', 'emailDestination': '', 'output': 'output.txt',
                   'username': '', 'smtpServer': '', 'emailSource': '', 'devModeEnable': '', 'zipEnable': '',
                   'sitePackagePath': '', 'emailSubject': '', 'emailBody': '', 'key': '', 'encryptedPassword': '', 'threadCount': '', 'emailUsername': '', 'emailKey': '', 'emailEncryptedPassword': '', 'smtpPort': ''}
-    config_file = open(config_file_name, 'r')
+    try:
+        config_file = open(config_file_name, 'r')
+    except Exception as e:
+        print("Configuration file failed to open with this message: %s" % (str(e)))
+        return parameters
     for line in config_file:
         split_line = line.split('=')
         # Work in a try block here
@@ -344,11 +348,9 @@ def main ():
                 email_body = sys.argv[i] + '\n\n'
 
                     
-    # Remove try block
-    try:
-        configFileOutput = read_config_file(config_file_name)
-    except Exception as e:
-        print("Configuration file failed to open with this message: %s" % (str(e)))
+
+    configFileOutput = read_config_file(config_file_name)
+
         
     # configFileOutput will pass defaults (set in the read_config_file() above) if the configuration file is not found
     # The following 5 values are the bare minimum needed to run the program
@@ -358,6 +360,16 @@ def main ():
         device_file_name = configFileOutput['devices']
     if not output_file_name:
         output_file_name = configFileOutput['output']
+    
+    
+    try:
+        commands = read_command_file(command_file_name)
+        hosts = read_device_file(device_file_name)
+    except IOError as e:
+        print("\nCould not open required input file (make sure there are no typos or if the file exists). IOError with message: %s\n\n" % (str(e)))
+        sys.exit()
+    
+    
     if not username:
         username = configFileOutput['username']
         if not username:
@@ -404,24 +416,7 @@ def main ():
         email_password = fnet_key.decrypt(configFileOutput['emailEncryptedPassword']).decode()
 
 
-
-    # Need a final check here to see there is a device file, command file and output file.
-
-
     mail_to += configFileOutput['emailDestination']
-
-
-    try:
-        commands = read_command_file(command_file_name)
-        hosts = read_device_file(device_file_name)
-        # output_file = open(output_file_name,'w')
-    except IOError as e:
-        print("\nCould not open input file. IOError with message: %s\n\n" % (str(e)))
-        sys.exit()
-
-
-    # Read SSH credentials
-    # Basic check to see if a user can enter the same password twice. Doesn't guard against 2 identical wrong inputs (which will lock your AD account when run on multiple devices).
 
     # Logging configuration to troubleshoot netmiko issues
     if devModeEnable:    
@@ -658,10 +653,6 @@ def main ():
         scriptlogger.add_log_entry(start_time,finish_time,os.path.basename(__file__),username)
     except Exception as e:
         print("\n\nPlease note unable to write script stats to log file: %s\n" % str(e))'''
-    
-
-
-
 
 
 if __name__ == '__main__':
