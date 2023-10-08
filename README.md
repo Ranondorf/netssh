@@ -1,15 +1,15 @@
 # netssh
-Script for interrogating network devices via SSH very quickly (1000's of devices in minutes).
+Script for interrogating network devices very quickly via SSH (1000's of devices in minutes).
 
 Key Features:
 
 - Using a list of devices with associated commands, retrieve consolidated output
 - Special feature allows for string searching across multiple devices
 - Supports Cisco ASA, IOS, IOS-XE, IOS-XR, NX-OS; Netscaler and Linux
-- Single thread or Multi-threaded mode
+- Single thread or Multi-threaded mode (with option to choose the number of threads running)
 - Allows running multiple commands against different device groups
 - Output into single file or multiple files per device. Zipped files supported
-- Unauthenticated email of output supported via SMTP server
+- Authenticated and authenticated email supported via SMTP server
 - Customizable script calls via CLI arguments and/or configuration file
 - If using saved passwords (eg when used in conjunction with Crontab), they are stored encrypted.
 - At this point in time, read only commands are supported on Cisco and Citrix devices.
