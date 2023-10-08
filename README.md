@@ -34,6 +34,7 @@ Clone this GIT repo to a directory on the local machine. However when calling th
 For example, setup like this
 
 /....some path....../netssh/
+
 /..some other path.../workding_dir/
 
 Copy devices, commands and config files to the working_dir folder from script_input_files. Then call netssh from that working_dir folder.
