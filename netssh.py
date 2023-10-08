@@ -8,7 +8,6 @@ import sys
 import re
 import queue
 import threading
-import paramiko
 from zipfile import ZipFile
 from zipfile import ZIP_DEFLATED
 from cryptography.fernet import Fernet
@@ -56,8 +55,9 @@ def pretty_print_hostname(hostname):
 
 
 def read_config_file(config_file_name):
+    # The defaults for the return value are preset.
     parameters = {'commands': 'commands.txt', 'devices': 'devices.txt', 'emailDestination': '', 'output': 'output.txt',
-                  'username': '', 'smtpServer': '', 'emailSource': '', 'absPath': '', 'devModeEnable': '', 'zipEnable': '',
+                  'username': '', 'smtpServer': '', 'emailSource': '', 'devModeEnable': '', 'zipEnable': '',
                   'sitePackagePath': '', 'emailSubject': '', 'emailBody': '', 'key': '', 'encryptedPassword': '', 'threadCount': '', 'emailUsername': '', 'emailKey': '', 'emailEncryptedPassword': '', 'smtpPort': ''}
     config_file = open(config_file_name, 'r')
     for line in config_file:
@@ -294,7 +294,6 @@ def main ():
     email_subject = ''
     email_username = ''
     smtpPort = ''
-    abs_path = ''
     processed_hosts = []
     failed_list = []
     passed_list = []
@@ -351,13 +350,31 @@ def main ():
     except Exception as e:
         print("Configuration file failed to open with this message: %s" % (str(e)))
         
-    # configFileOutput will pass defaults if the configuration file is not found
+    # configFileOutput will pass defaults (set in the read_config_file() above) if the configuration file is not found
+    # The following 5 values are the bare minimum needed to run the program
     if not command_file_name:
-       command_file_name = configFileOutput['commands']
+        command_file_name = configFileOutput['commands']
     if not device_file_name:
-       device_file_name = configFileOutput['devices']
+        device_file_name = configFileOutput['devices']
     if not output_file_name:
-       output_file_name = configFileOutput['output']
+        output_file_name = configFileOutput['output']
+    if not username:
+        username = configFileOutput['username']
+        if not username:
+            username = input('Username: ')
+    # Check to see if encrypted password can be read from file
+    if configFileOutput['key'] != '':
+        fnet_key = Fernet(configFileOutput['key'])
+        ad_password = fnet_key.decrypt(configFileOutput['encryptedPassword']).decode()
+    else:
+        ad_password = getpass.getpass('Login Password: ')
+        confirm_password = getpass.getpass('Reconfirm Password: ')
+        if ad_password != confirm_password:
+            print('\nPasswords do not match')
+            sys.exit()    
+    # End of mandatory values
+    
+    
     if not email_subject:
         email_subject = configFileOutput['emailSubject']
     if not email_subject:
@@ -373,10 +390,7 @@ def main ():
             threadCount = int(configFileOutput['threadCount'])
         except:
             pass
-    if not username:
-        username = configFileOutput['username']
-    if not username:
-        username = input('Username: ')
+
     if not zip_output:
         if configFileOutput['zipEnable'] == 'True':
             zip_output = True
@@ -388,22 +402,13 @@ def main ():
     if configFileOutput['emailKey'] != '':
         fnet_key = Fernet(configFileOutput['emailKey'])
         email_password = fnet_key.decrypt(configFileOutput['emailEncryptedPassword']).decode()
-    # Check to see if encrypted password can be read from file
-    if configFileOutput['key'] != '':
-        fnet_key = Fernet(configFileOutput['key'])
-        ad_password = fnet_key.decrypt(configFileOutput['encryptedPassword']).decode()
-    else:
-        ad_password = getpass.getpass('Login Password: ')
-        confirm_password = getpass.getpass('Reconfirm Password: ')
-        if ad_password != confirm_password:
-            print('\nPasswords do not match')
-            sys.exit()
+
+
 
     # Need a final check here to see there is a device file, command file and output file.
 
 
     mail_to += configFileOutput['emailDestination']
-    abs_path = configFileOutput['absPath']
 
 
     try:
@@ -421,8 +426,7 @@ def main ():
     # Logging configuration to troubleshoot netmiko issues
     if devModeEnable:    
         '''logging.basicConfig(filename='logs/netmiko_debug.log', level=logging.DEBUG)
-        logger = logging.getLogger("netmiko")
-        paramiko.util.log_to_file("logs/filename.log")'''
+        logger = logging.getLogger("netmiko")'''
 
 
     print("\n\nAttempting connecting to hosts:\n\n")
@@ -522,7 +526,7 @@ def main ():
 
 
     elif output_file_name == "SPLIT":
-        output_dirpath = abs_path + "output_" + time.strftime("%Y%m%d_%H%M%S") + "/"
+        output_dirpath = "output_" + time.strftime("%Y%m%d_%H%M%S") + "/"
         print("\n\nSplit option specified for multiple output files. Files will be available in directory, \"%s\"" % (output_dirpath))
         os.mkdir(output_dirpath, 0o777)
         for processed_host in processed_hosts:

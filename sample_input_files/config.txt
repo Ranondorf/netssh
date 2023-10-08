@@ -37,8 +37,6 @@ output=output.txt
 # emailKey=
 # emailEncryptedPassword=
 
-# Absolute path variable, not used and may be depracated
-# absPath=''
 
 # Set zipping the output file. This is False by default and output will not be zipped; unless it is considered big and the program will zip it anyway.
 # zipEnable=False
