@@ -297,6 +297,7 @@ def main ():
     email_body = ''
     email_subject = ''
     email_username = ''
+    email_password = ''
     smtpPort = ''
     processed_hosts = []
     failed_list = []
@@ -494,20 +495,20 @@ def main ():
             for i in range(len(match_set)):
                 popped = match_set.pop()
                 match_set_string += popped + '\n'
-            email_body += match_set_string
+        else:
+            match_set_string = "\n\nThe filter, \'%s\' failed to match on any hosts where the commands ran successfully\n\n" % (filter_string)
+        email_body += match_set_string
 
         if len(failed_list) != 0:
-            failed_list_string = "\n\nCommand failed on the following devices with error messages:\n\n"
+            failed_list_string = "\n\nCommands failed on the following devices with error messages:\n\n"
             for host in failed_list:
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string
-
         try:
             mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,None,smtpServer,smtpPort,email_username,email_password)
             print("\n\nEmail sent")
         except Exception as e:
-            print("\n\nEmail not sent")
-            print(str(e))
+            print("\n\nEmail not sent,", "Error message: " + str(e))
 
 
     # #################################################
@@ -565,8 +566,7 @@ def main ():
                 mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,[output_file_name],smtpServer,smtpPort,email_username,email_password)
                 print("\n\nEmail sent")
             except Exception as e2:
-                print("\n\nEmail not sent")
-                print(str(e2))
+                print("\n\nEmail not sent,", "Error message: " + str(e2))
             if delete_output:
                 try:
                     os.remove(output_file_name)
@@ -630,8 +630,7 @@ def main ():
             mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtpPort, email_username, email_password)
             print("\n\nEmail sent")
         except Exception as e:
-            print("\n\nEmail not sent")
-            print("Error message: " + str(e))
+            print("\n\nEmail not sent,", "Error message: " + str(e))
             
         if delete_output:
             try:
