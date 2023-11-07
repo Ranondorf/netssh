@@ -174,12 +174,12 @@ def read_device_file(device_file_name):
     return hosts
     
 
-def zip_output_file(output_file_name, raw_output_files, path=''):
+def zip_output_file(output_file_name, raw_output_files):
     zipped_output_file_name = output_file_name + '.zip'
     zipped_output_file = ZipFile(zipped_output_file_name, mode="w", compression=ZIP_DEFLATED)
     for raw_output_file in raw_output_files:
         try:    
-            zipped_output_file.write(path + raw_output_file, raw_output_file)
+            zipped_output_file.write(os.path.join(output_file_name, raw_output_file), raw_output_file)
         except Exception as e:
             print("Writing to zipfile failed with error: %s" % (str(e)))
     zipped_output_file.close()
@@ -522,13 +522,13 @@ def main ():
 
 
     elif output_file_name == "SPLIT":
-        output_dirpath = "output_" + time.strftime("%Y%m%d_%H%M%S") + "/"
-        print("\n\nSplit option specified for multiple output files. Files will be available in directory, \"%s\"" % (output_dirpath))
+        output_dirpath = "output_" + time.strftime("%Y%m%d_%H%M%S")
+        print("\n\nSplit option specified for multiple output files. Files will be available in directory, \"%s\": unless -z flag set" % (output_dirpath))
         os.mkdir(output_dirpath, 0o777)
         for processed_host in processed_hosts:
             if processed_host.result == 'success':
                 try:
-                    output_file = open(output_dirpath + processed_host.hostname + ".txt",'w')
+                    output_file = open(os.path.join(output_dirpath, processed_host.hostname + ".txt"),'w')
                     output_file.write(pretty_print_hostname(processed_host.hostname))
                     for command in processed_host.outputs:
                         output_file.write("--------- %s " % command)
@@ -557,7 +557,7 @@ def main ():
         ###ADD BLOCK for handling no output files
         
         if zip_output:
-            output_file_name = zip_output_file(output_dirpath[:-1], os.listdir(output_dirpath), output_dirpath)
+            output_file_name = zip_output_file(output_dirpath, os.listdir(output_dirpath))
             try:
                 shutil.rmtree(output_dirpath)
             except OSError as e:
