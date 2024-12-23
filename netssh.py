@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import os
 import getpass
 from netmiko import ConnectHandler
@@ -111,7 +110,7 @@ def read_command_file(command_file_name):
         elif line[0] == '[' and line[-1] == ']' and not comment:
             # Catches line matching device type, eg: ios_xr, netscaler, etc
             device_type = line.lstrip('[').rstrip(']')
-        elif re.search('con.*\st', line) is not None:
+        elif re.search('con.* t', line) is not None:
             # Catches conf t and its variants
             pass
         elif device_type == 'netscaler' and re.search('^(unbind|bind|add|rm)', line):
@@ -238,7 +237,7 @@ def ssh_command(threadID,q,username,password,commands):
 
             if process_next_ConnectHandler:
                 for command in commandSubset:
-                    raw_command = re.sub("\s\(instance\s#[0-9]*\)", '', command)
+                    raw_command = re.sub(r" \(instance #[0-9]*\)", '', command)
                     attempt_number = 1
                     process_next_ConnectHandler = False
                     while not process_next_ConnectHandler and attempt_number < max_retries + 1:
@@ -271,7 +270,7 @@ def ssh_command(threadID,q,username,password,commands):
         else:
             queueLock.release()
 
-def main ():
+def device_connect():
     # Script start time
     start_time = time.time()
 
@@ -652,6 +651,10 @@ def main ():
         scriptlogger.add_log_entry(start_time,finish_time,os.path.basename(__file__),username)
     except Exception as e:
         print("\n\nPlease note unable to write script stats to log file: %s\n" % str(e))'''
+
+
+def main():
+    device_connect()
 
 
 if __name__ == '__main__':
