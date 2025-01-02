@@ -12,6 +12,7 @@ from zipfile import ZIP_DEFLATED
 from cryptography.fernet import Fernet
 import pprint
 import shutil
+import json
 import common.scriptlogger as scriptlogger
 import common.mailattachment as mailattachment
 
@@ -68,7 +69,7 @@ def read_config_file(config_file_name):
         if split_line[0] in parameters:
             split_line[1] = split_line[1].rstrip('\n')
             # Read files for key and encrypted password and convert values to byte values to be used in decryption later
-            if (split_line[0] == 'key' or split_line[0] == 'encryptedPassword' or split_line[0] == 'emailKey' or split_line[0] == 'emailEncryptedPassword') and split_line[1] != "''":
+            if (split_line[0] == 'key' or split_line[0] == 'emailKey' or split_line[0] == 'emailEncryptedPassword') and split_line[1] != "''":
                 try:
                     read_file = open(split_line[1], 'r')
                     single_line = read_file.readline().rstrip('\n')
@@ -377,32 +378,45 @@ def device_connect():
         sys.exit()
     
     
-    # Sys argv block above checks if username was passed with -u on command line.
-    # In the event it doesn't it checks if the username is explicitly mentioned in the config file.
-    if not username:
-        username = configFileOutput['username']
-        # Manually inputting the username below is the last step. Before this there needs to be a block to handle creds.json.
-        if not username:
-            username = input('Username: ')
-    # Check to see if encrypted password can be read from file
-
-    if configFileOutput['key'] != '':
+    # Sys argv block above checks if username was passed with -u on command line, this takes precedence
+    if username:
+        password = 'blank'
+        confirm_password = 'blank2'
+        while password != confirm_password:
+            password = getpass.getpass('Login Password: ')
+            confirm_password = getpass.getpass('Reconfirm Password: ')
+            if password != confirm_password:
+                print('Passwords do not match, please try again.')
+    # Default val is '' - Test this in the config file by leaving it blank.
+    elif configFileOutput['key']:
         fnet_key = Fernet(configFileOutput['key'])
-        ad_password = fnet_key.decrypt(configFileOutput['encryptedPassword']).decode()
-    else:
-        ad_password = getpass.getpass('Login Password: ')
-        confirm_password = getpass.getpass('Reconfirm Password: ')
-        if ad_password != confirm_password:
-            print('\nPasswords do not match')
-            sys.exit()
+
+
+        with open(configFileOutput['encryptedPassword'], 'r') as json_file:
+            key_chain = json.load(json_file)
+
+        for key in key_chain.keys():
+            key_chain[key]['password'] = fnet_key.decrypt(key_chain[key]['password']).decode()
+            key_chain[key]['secret'] = fnet_key.decrypt(key_chain[key]['secret']).decode()
+
+        print(json.dumps(key_chain, indent=4))
+
 
     # setup the hosts variable with username and password.
     for host in hosts:
-        host.username = username
-        host.password = ad_password
-        host.secret = ad_password
+        host.username = key_chain[host.credential_set]['username']
+        host.password = key_chain[host.credential_set]['password']
+        host.secret = key_chain[host.credential_set]['secret']
+        # print(host.__dict__)
     # End of mandatory values
     
+
+
+
+    #### FORCED STOP For Development ####
+    # print(f'Program terminated')
+    # sys.exit()
+
     
     if not email_subject:
         email_subject = configFileOutput['emailSubject']

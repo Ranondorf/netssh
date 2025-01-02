@@ -74,15 +74,14 @@ def create_key_chain():
         token = f.encrypt(credentials[1].encode())
         key_chain[key]['password'] = token.decode()
         token = f.encrypt(credentials[2].encode())
-        key_chain[key]['enable_pass'] = token.decode()
+        key_chain[key]['secret'] = token.decode()
 
     
-    print(key_chain)
+    # print(key_chain)
     
     write_credentials(key_chain, "creds.json")
 
-    print("got here")
-    with open('encrypt.txt', 'w') as enc_file:
+    with open('enc_key', 'w') as enc_file:
         enc_file.write(encryption_key.decode())
 
 
@@ -94,10 +93,6 @@ def main():
  
     create_key_chain()
 
-    '''
-    print('Randomly generated key: %s' % (key.decode()))
-    print('Encrypted password:     %s' % (token.decode()))
-    print(key)'''
 
 if __name__ == '__main__':
     try:
