@@ -189,21 +189,19 @@ def zip_output_file(output_file_name, raw_output_files):
 
 
 class MyThread (threading.Thread):
-    def __init__(self, threadID, q, username, password, commands):
+    def __init__(self, threadID, q, commands):
         threading.Thread.__init__(self)
         self.threadID = threadID
-        self.username = username
         self.q = q
-        self.password = password
         self.commands = commands
 
     def run(self):
         print("Starting thread ID:  "+str(self.threadID))
-        ssh_command(self.threadID,self.q,self.username,self.password,self.commands)
+        ssh_command(self.threadID, self.q, self.commands)
         print("Ending thread ID:  "+str(self.threadID))
 
 ##########Look at introducing 3 attempts per host#############
-def ssh_command(threadID,q,username,password,commands):
+def ssh_command(threadID, q, commands):
     while not exitFlag:
         queueLock.acquire()
         if not workQueue.empty():
@@ -272,11 +270,17 @@ def ssh_command(threadID,q,username,password,commands):
         else:
             queueLock.release()
 
+
+def timer(func):
+    def wrapper():
+        start_time = time.time()
+        func()
+        print(f'Script run time is {str(time.time() - start_time)} seconds\n')
+    return wrapper
+
+
+@timer
 def device_connect():
-    # Script start time
-    start_time = time.time()
-
-
     # Variable initializations. Only 2 variables are assigned here. Core input variables are set in read_config_file.
     # With the exception of config_file_name which points to the file that sets the configuration, it is advised to not set any other variable from here.
     global exitFlag
@@ -457,7 +461,7 @@ def device_connect():
 
     # create actual threads from thread names. MyThread gets the SSH command executed
     for threadID in range(1, threadCount+1):
-        thread = MyThread(threadID, workQueue, username, ad_password, commands)
+        thread = MyThread(threadID, workQueue, commands)
         thread.start()
         threads.append(thread)
 
@@ -654,9 +658,6 @@ def device_connect():
     # Generating end of program summary, reusing email body here
     print(email_body)
     
-
-    finish_time = time.time()
-    print("\n\nScript execution time is %s seconds\n" % str(finish_time - start_time))
     
     # Try and log script execution stats to log file#
     
