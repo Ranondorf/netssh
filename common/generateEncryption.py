@@ -48,7 +48,7 @@ def create_key_chain():
 
 
 
-    current = 'default_creds'
+    current = 'cred_default'
     num_cred = input('How many unique credentials would you like to create?')
     print(f'{num_cred} entries will be created:')
     key_chain = {current : {} }    

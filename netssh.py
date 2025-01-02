@@ -15,15 +15,14 @@ import shutil
 import common.scriptlogger as scriptlogger
 import common.mailattachment as mailattachment
 
-class NetworkObject(object):
-    hostname = ""
-    device_type = ""
-    group = ""
+class NetworkObject():
+
     
-    def __init__(self, hostname, device_type, group):
+    def __init__(self, hostname, device_type, group, credential_set):
         self.hostname = hostname
         self.device_type = device_type
         self.group = group
+        self.credential_set = credential_set
 
 
 def pretty_print_hostname(hostname):
@@ -144,6 +143,7 @@ def read_device_file(device_file_name):
     valid_device_types = ["[cisco_asa]", "[cisco_ios]", "[cisco_xe]", "[cisco_xr]", "[netscaler]", "[cisco_nxos]", "[linux]"]
     comment = False
     group = "DEFAULT"
+    credential_set = "cred_default"
     device_type = None
     for line in devices_file:
         hostname = line.rstrip('\n\r\t')
@@ -160,12 +160,14 @@ def read_device_file(device_file_name):
         elif hostname in valid_device_types and not comment:
             device_type = hostname.lstrip('[').rstrip(']')
             # set the device_type as long as the comment flag is false
+        elif hostname[0:6] == '<cred_'  and not comment:
+            credential_set = hostname.lstrip('<').rstrip('>')
         elif hostname[0] == '<' and hostname[-1] == '>' and not comment:
             group = hostname.lstrip('<').rstrip('>')
             if group == "":
                 group = "DEFAULT"
         elif not comment and device_type:
-            hosts.append(NetworkObject(hostname, device_type, group))
+            hosts.append(NetworkObject(hostname, device_type, group, credential_set))
         else:
             pass
             #Presumably comments
@@ -215,11 +217,11 @@ def ssh_command(threadID,q,username,password,commands):
             while not process_next_ConnectHandler and attempt_number < max_retries + 1:
                 try:
                     if devModeEnable:
-                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,
-                        secret=password, timeout=10, session_log='logs/netmiko_session_output/'+host.hostname+'.log')
+                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=host.username, password=host.password,
+                        secret=host.secret, timeout=10, session_log='logs/netmiko_session_output/'+host.hostname+'.log')
                     else:
-                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=username, password=password,
-                        secret=password, timeout=10)
+                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=host.username, password=host.password,
+                        secret=host.secret, timeout=10)
                     process_next_ConnectHandler = True
                 except Exception as e:
                     print('%s failed on login attempt %s' % (host.hostname, attempt_number))
@@ -276,6 +278,7 @@ def device_connect():
 
 
     # Variable initializations. Only 2 variables are assigned here. Core input variables are set in read_config_file.
+    # With the exception of config_file_name which points to the file that sets the configuration, it is advised to not set any other variable from here.
     global exitFlag
     global workQueue
     global queueLock
@@ -370,11 +373,15 @@ def device_connect():
         sys.exit()
     
     
+    # Sys argv block above checks if username was passed with -u on command line.
+    # In the event it doesn't it checks if the username is explicitly mentioned in the config file.
     if not username:
         username = configFileOutput['username']
+        # Manually inputting the username below is the last step. Before this there needs to be a block to handle creds.json.
         if not username:
             username = input('Username: ')
     # Check to see if encrypted password can be read from file
+
     if configFileOutput['key'] != '':
         fnet_key = Fernet(configFileOutput['key'])
         ad_password = fnet_key.decrypt(configFileOutput['encryptedPassword']).decode()
@@ -383,7 +390,13 @@ def device_connect():
         confirm_password = getpass.getpass('Reconfirm Password: ')
         if ad_password != confirm_password:
             print('\nPasswords do not match')
-            sys.exit()    
+            sys.exit()
+
+    # setup the hosts variable with username and password.
+    for host in hosts:
+        host.username = username
+        host.password = ad_password
+        host.secret = ad_password
     # End of mandatory values
     
     
