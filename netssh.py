@@ -76,7 +76,7 @@ def read_config_file(config_file_name):
                     parameters[split_line[0]] = single_line.encode()
                     read_file.close()
                 except Exception as e:
-                    print('Failed to open file containing %s with Exception %s' % (split_line[1], str(e)))
+                    print('Failed to open file containing %s with Exception %s. This happened when trying to parse "%s" in the configuration file.' % (split_line[1], str(e), split_line[0]))
             elif split_line[0] == 'emailDestination':
                 parameters[split_line[0]] = split_line[1].split(',')
             else:
@@ -272,6 +272,33 @@ def ssh_command(threadID, q, commands):
             queueLock.release()
 
 
+def get_password() -> str:
+    '''Basic function for getting a password'''
+    while True:
+        password = getpass.getpass('Enter the password: ')
+        confirm_password = getpass.getpass('Please reconfirm password: ')
+        if password != confirm_password:
+            print('\nPasswords do not match: please re-enter the passwords')
+        else:
+            break
+
+
+    return password
+
+
+def get_passwords(username: str, cred_name: str) -> dict:
+    '''Creates 2 passwords and returns them in a JSON dict format'''
+    password = get_password()
+    next_password = input('''Is there another password required for higher privileges 
+    that is different from the previous password?''')
+    if next_password.lower()[0] == 'y':
+        secret = get_password()
+    else:
+        secret = password
+    return {cred_name : {"username": username , "password": password, "secret": secret}}
+ 
+
+
 def timer(func):
     def wrapper():
         start_time = time.time()
@@ -380,29 +407,42 @@ def device_connect():
     
     # Sys argv block above checks if username was passed with -u on command line, this takes precedence
     if username:
-        password = 'blank'
-        confirm_password = 'blank2'
-        while password != confirm_password:
-            password = getpass.getpass('Login Password: ')
-            confirm_password = getpass.getpass('Reconfirm Password: ')
-            if password != confirm_password:
-                print('Passwords do not match, please try again.')
+        # Change this into a function that takes the username and returns JSON style dictionary
+        key_chain = get_passwords(username, 'cred_default')
+    
+
+    # Second priority is setting the 'key' in the configuration file
     # Default val is '' - Test this in the config file by leaving it blank.
     elif configFileOutput['key']:
-        fnet_key = Fernet(configFileOutput['key'])
 
+        try:
+            fnet_key = Fernet(configFileOutput['key'])
+            with open(configFileOutput['encryptedPassword'], 'r') as json_file:
+                key_chain = json.load(json_file)
+        
 
-        with open(configFileOutput['encryptedPassword'], 'r') as json_file:
-            key_chain = json.load(json_file)
+        except Exception as e:
+            print("\nSomething went wrong with encryption key file or key chain file. Please make sure they are properly defined. IOError with message: %s\n\n" % (str(e)))
+            sys.exit()
+
 
         for key in key_chain.keys():
             key_chain[key]['password'] = fnet_key.decrypt(key_chain[key]['password']).decode()
             key_chain[key]['secret'] = fnet_key.decrypt(key_chain[key]['secret']).decode()
 
-        print(json.dumps(key_chain, indent=4))
+    # Check if username is set in config file, this is the 3rd option
+    elif configFileOutput['username']:
+        key_chain = get_passwords(configFileOutput['username'], 'cred_default')
+
+
+    # Prompt for a username is the final and fourth option.
+    else:
+        username = input("Please enter your username")
+        key_chain = get_passwords(username, 'cred_default')
 
 
     # setup the hosts variable with username and password.
+    # Add in a case to deal with a credential_set not existing.
     for host in hosts:
         host.username = key_chain[host.credential_set]['username']
         host.password = key_chain[host.credential_set]['password']
@@ -411,13 +451,6 @@ def device_connect():
     # End of mandatory values
     
 
-
-
-    #### FORCED STOP For Development ####
-    # print(f'Program terminated')
-    # sys.exit()
-
-    
     if not email_subject:
         email_subject = configFileOutput['emailSubject']
     if not email_subject:
