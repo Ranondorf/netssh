@@ -10,23 +10,31 @@ import threading
 from zipfile import ZipFile
 from zipfile import ZIP_DEFLATED
 from cryptography.fernet import Fernet
-import pprint
 import shutil
 import json
 import common.scriptlogger as scriptlogger
 import common.mailattachment as mailattachment
 
-class NetworkObject:
 
+class NetworkObject:
+    """ Network Object defines an object with all necessary data to form an SSH connection to it. 
+    The results of the SSH query are stored in the unassigned varibles with the None values.
+    """
     
-    def __init__(self, hostname, device_type, group, credential_set):
+    def __init__(self, hostname: str, device_type: str, group: str, credential_set: str):
         self.hostname = hostname
         self.device_type = device_type
         self.group = group
         self.credential_set = credential_set
+        self.result: str = None
+        self.error: str = None
+        self.outputs: dict = None
 
 
-def pretty_print_hostname(hostname):
+def pretty_print_hostname(hostname: str) -> str:
+    """ Pretty prints the hostname in a banner, this is returned as a string.
+    """
+
     length = 80
     hash_line = ''
     for i in range(length):
@@ -50,14 +58,32 @@ def pretty_print_hostname(hostname):
 
     return pretty_hostname
 
-# ###Introduce debug flag####
 
+def read_config_file(config_file_name:str) -> dict:
+    """ This function reads the configuration file. Not all options have to be set. Some defaults are set, but do not override here.
+    """
 
-def read_config_file(config_file_name):
-    # The defaults for the return value are preset.
-    parameters = {'commands': 'commands.txt', 'devices': 'devices.txt', 'emailDestination': '', 'output': 'output.txt',
-                  'username': '', 'smtpServer': '', 'emailSource': '', 'devModeEnable': '', 'zipEnable': '',
-                  'sitePackagePath': '', 'emailSubject': '', 'emailBody': '', 'key': '', 'encryptedPassword': '', 'threadCount': '', 'emailUsername': '', 'emailKey': '', 'emailEncryptedPassword': '', 'smtpPort': ''}
+    parameters = {'commands': 'commands.txt', 
+                  'devices': 'devices.txt', 
+                  'emailDestination': '', 
+                  'output': 'output.txt',
+                  'username': '', 
+                  'smtpServer': '', 
+                  'emailSource': '', 
+                  'devModeEnable': '', 
+                  'zipEnable': '',
+                  'sitePackagePath': '', 
+                  'emailSubject': '', 
+                  'emailBody': '', 
+                  'key': '', 
+                  'encryptedPassword': '', 
+                  'threadCount': '', 
+                  'emailUsername': '', 
+                  'emailKey': '', 
+                  'emailEncryptedPassword': '', 
+                  'smtpPort': ''
+    }
+
     try:
         config_file = open(config_file_name, 'r')
     except Exception as e:
@@ -82,11 +108,14 @@ def read_config_file(config_file_name):
             else:
                 parameters[split_line[0]] = split_line[1]
     config_file.close()
-    # pprint.pprint(parameters)
+
     return parameters
 
 
-def read_command_file(command_file_name):
+def read_command_file(command_file_name: str) -> dict[str, dict[str, list[str]]]:
+    """ This reads the file that contains the commands to be run. This section identifies groups and device types.
+    Groups allow the same device type to have different commands run against them.
+    """
     commands = {}
     commands_file = open(command_file_name, 'r')
     device_type = ''
@@ -136,9 +165,15 @@ def read_command_file(command_file_name):
                 line = duplicate_line
             commands[group][device_type].append(line)
     commands_file.close()
+
     return commands
 
-def read_device_file(device_file_name):
+
+def read_device_file(device_file_name: str) -> list[NetworkObject]:
+    """ Read file with devices. Returns a list of NetworkObjects. NetworkObjects will have their
+    hostname, device type, group and credential set assigned.
+    """
+
     devices_file = open(device_file_name, 'r')
     hosts = []
     valid_device_types = ["[cisco_asa]", "[cisco_ios]", "[cisco_xe]", "[cisco_xr]", "[netscaler]", "[cisco_nxos]", "[linux]"]
@@ -173,6 +208,7 @@ def read_device_file(device_file_name):
             pass
             #Presumably comments
     devices_file.close()  
+
     return hosts
     
 
