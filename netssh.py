@@ -201,7 +201,7 @@ class MyThread (threading.Thread):
         ssh_command(self.threadID, self.q, self.commands)
         print("Ending thread ID:  "+str(self.threadID))
 
-##########Look at introducing 3 attempts per host#############
+
 def ssh_command(threadID, q, commands):
     while not exitFlag:
         queueLock.acquire()
@@ -333,6 +333,11 @@ def device_connect():
     email_username = ''
     email_password = ''
     smtpPort = ''
+    # List for hosts read straight from device file
+    raw_hosts: List[NetworkObject] = []
+    # Refined list of hosts to be processed (via SSH function)
+    hosts: List[NetworkObject] = []
+    # Hosts after they have been processed (via SSH function)
     processed_hosts = []
     failed_list = []
     passed_list = []
@@ -399,7 +404,7 @@ def device_connect():
     
     try:
         commands = read_command_file(command_file_name)
-        hosts = read_device_file(device_file_name)
+        raw_hosts = read_device_file(device_file_name)
     except IOError as e:
         print("\nCould not open required input file (make sure there are no typos or if the file exists). IOError with message: %s\n\n" % (str(e)))
         sys.exit()
@@ -443,13 +448,21 @@ def device_connect():
 
     # setup the hosts variable with username and password.
     # Add in a case to deal with a credential_set not existing.
-    for host in hosts:
-        host.username = key_chain[host.credential_set]['username']
-        host.password = key_chain[host.credential_set]['password']
-        host.secret = key_chain[host.credential_set]['secret']
-        # print(host.__dict__)
-    # End of mandatory values
+    for host in raw_hosts:
+        try:
+            host.username = key_chain[host.credential_set]['username']
+            host.password = key_chain[host.credential_set]['password']
+            host.secret = key_chain[host.credential_set]['secret']
+            hosts.append(host)
+            # print(host.__dict__)
+        except KeyError as e:
+            host.result = 'fail'
+            host.error = f'According to device file the credential is {str(e)}, but no such credential exists in the credentials file'
+            failed_list.append(host)
+
     
+    # End of mandatory values
+    # sys.exit() 
 
     if not email_subject:
         email_subject = configFileOutput['emailSubject']
