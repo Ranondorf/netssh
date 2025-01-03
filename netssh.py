@@ -16,7 +16,7 @@ import json
 import common.scriptlogger as scriptlogger
 import common.mailattachment as mailattachment
 
-class NetworkObject():
+class NetworkObject:
 
     
     def __init__(self, hostname, device_type, group, credential_set):
