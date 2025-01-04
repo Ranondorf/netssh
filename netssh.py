@@ -5,7 +5,7 @@ import time
 import math
 import sys
 import re
-import queue
+from queue import Queue
 from threading import Thread
 from threading import Lock
 from zipfile import ZipFile
@@ -13,6 +13,7 @@ from zipfile import ZIP_DEFLATED
 from cryptography.fernet import Fernet
 import shutil
 import json
+# scriptlogger and mailattachment are currently not functioning.
 import common.scriptlogger as scriptlogger
 import common.mailattachment as mailattachment
 
@@ -36,8 +37,8 @@ class MyThread (Thread):
     """ Class that defines thread objects. This allows use of multithreading the ssh function.
     """
 
-    def __init__(self, threadID: str, q: queue.Queue, commands: dict[str, dict[str, list[str]]]):
-        Thread.__init__(self)
+    def __init__(self, threadID: str, q: Queue, commands: dict[str, dict[str, list[str]]]):
+        super().__init__()
         self.threadID = threadID
         self.q = q
         self.commands = commands
@@ -80,28 +81,29 @@ def pretty_print_hostname(hostname: str) -> str:
 
 
 def read_config_file(config_file_name:str) -> dict:
-    """ This function reads the configuration file. Not all options have to be set. Some defaults are set, but do not override here.
+    """ This function reads the configuration file. Not all options have to be set. Only 3 defaults are listed here in the event that the configuration file does not have them.
+    Do not set anything in here. Either add them to the configuration file or pass them as a command line arguement.
     """
 
-    parameters = {'commands': 'commands.txt', 
-                  'devices': 'devices.txt', 
-                  'emailDestination': '', 
+    parameters = {'commands': 'commands.txt',
+                  'devices': 'devices.txt',
                   'output': 'output.txt',
                   'username': '', 
-                  'smtpServer': '', 
-                  'emailSource': '', 
+                  'key': '', 
+                  'encryptedPassword': '',  
                   'devModeEnable': '', 
                   'zipEnable': '',
-                  'sitePackagePath': '', 
+                  'sitePackagePath': '',
+                  'emailSource': '',
+                  'emailDestination': '',
                   'emailSubject': '', 
                   'emailBody': '', 
-                  'key': '', 
-                  'encryptedPassword': '', 
                   'threadCount': '', 
                   'emailUsername': '', 
                   'emailKey': '', 
                   'emailEncryptedPassword': '', 
-                  'smtpPort': ''
+                  'smtpPort': '',
+                  'smtpServer': ''
     }
 
     try:
@@ -250,9 +252,12 @@ def zip_output_file(output_file_name: str, raw_output_files: list[str]) -> str:
     return zipped_output_file_name
 
 
-def ssh_command(threadID, q, commands):
+def ssh_command(threadID: str, q: Queue, commands):
     """ SSH function. Takes objects of a queue and runs the appropriate commands against this. This is function is used by multiple threads, hence the queueLock 
     when accessing the object queue. Likewise when storing results in the list of network objects, a listLock is utilized.
+
+    This is where the networkObject will have its undefined variables potentially set. The 'result' will always be set. Depending on if the ssh function working 
+    or not, either the 'error' or 'outputs' will be set.
     """
 
     while not exitFlag:
@@ -377,7 +382,13 @@ def device_connect():
     global queueLock
     global listLock
     global processed_hosts
+    # processed_hosts = list[NetworkObject]
+    processed_hosts = []
     global devModeEnable
+    exitFlag = 0
+    queueLock = Lock()
+    listLock = Lock()
+    threads = []
     command_file_name = ''
     device_file_name = ''
     output_file_name = ''
@@ -395,11 +406,11 @@ def device_connect():
     email_password = ''
     smtpPort = ''
     # List for hosts read straight from device file
-    raw_hosts: List[NetworkObject] = []
+    raw_hosts: list[NetworkObject] = []
     # Refined list of hosts to be processed (via SSH function)
-    hosts: List[NetworkObject] = []
+    hosts: list[NetworkObject] = []
     # Hosts after they have been processed (via SSH function)
-    processed_hosts = []
+    
     failed_list = []
     passed_list = []
     match_set = set()
@@ -573,12 +584,8 @@ def device_connect():
             threadCount = 100
     elif threadCount > len(hosts):
         threadCount = len(hosts)
-    exitFlag = 0
-    queueLock = Lock()
-    workQueue = queue.Queue(len(hosts))
-    listLock = Lock()
-    threads = []
- 
+    
+    workQueue = Queue(len(hosts))
 
     # create actual threads from thread names. MyThread gets the SSH command executed
     for threadID in range(1, threadCount+1):
@@ -586,13 +593,10 @@ def device_connect():
         thread.start()
         threads.append(thread)
 
-    queueLock.acquire()
 
     for host in hosts:
         workQueue.put(host)
     # This clears hosts for the next bit. Might be better to rename this processed_hosts
-
-    queueLock.release()
 
     while not workQueue.empty():
         pass
