@@ -6,7 +6,8 @@ import math
 import sys
 import re
 import queue
-import threading
+from threading import Thread
+from threading import Lock
 from zipfile import ZipFile
 from zipfile import ZIP_DEFLATED
 from cryptography.fernet import Fernet
@@ -29,6 +30,22 @@ class NetworkObject:
         self.result: str = None
         self.error: str = None
         self.outputs: dict = None
+
+
+class MyThread (Thread):
+    """ 
+    """
+
+    def __init__(self, threadID, q, commands):
+        Thread.__init__(self)
+        self.threadID = threadID
+        self.q = q
+        self.commands = commands
+
+    def run(self):
+        print("Starting thread ID:  "+str(self.threadID))
+        ssh_command(self.threadID, self.q, self.commands)
+        print("Ending thread ID:  "+str(self.threadID))
 
 
 def pretty_print_hostname(hostname: str) -> str:
@@ -212,7 +229,11 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
     return hosts
     
 
-def zip_output_file(output_file_name, raw_output_files):
+def zip_output_file(output_file_name: str, raw_output_files: list[str]) -> str:
+    """ Takes the prefix for the output file name and a list of files to be zipped. Zips the list of files into an 
+    archive '<output_file_name>.zip'. Returns a string representing the zip file's name.
+    """
+
     zipped_output_file_name = output_file_name + '.zip'
     zipped_output_file = ZipFile(zipped_output_file_name, mode="w", compression=ZIP_DEFLATED)
     for raw_output_file in raw_output_files:
@@ -222,20 +243,11 @@ def zip_output_file(output_file_name, raw_output_files):
             print("Writing to zipfile failed with error: %s" % (str(e)))
     zipped_output_file.close()
     os.chmod(zipped_output_file_name, 0o666)
+
     return zipped_output_file_name
 
 
-class MyThread (threading.Thread):
-    def __init__(self, threadID, q, commands):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.q = q
-        self.commands = commands
 
-    def run(self):
-        print("Starting thread ID:  "+str(self.threadID))
-        ssh_command(self.threadID, self.q, self.commands)
-        print("Ending thread ID:  "+str(self.threadID))
 
 
 def ssh_command(threadID, q, commands):
@@ -549,9 +561,9 @@ def device_connect():
     elif threadCount > len(hosts):
         threadCount = len(hosts)
     exitFlag = 0
-    queueLock = threading.Lock()
+    queueLock = Lock()
     workQueue = queue.Queue(len(hosts))
-    listLock = threading.Lock()
+    listLock = Lock()
     threads = []
  
 
