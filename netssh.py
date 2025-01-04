@@ -260,6 +260,13 @@ def ssh_command(threadID: str, q: Queue, commands):
     or not, either the 'error' or 'outputs' will be set.
     """
 
+    global exitFlag
+    global queueLock
+    global listLock
+    global processed_hosts
+    global devModeEnable
+
+
     while not exitFlag:
         queueLock.acquire()
         if not q.empty():
@@ -377,40 +384,53 @@ def device_connect():
 
     # Variable initializations. Only 2 variables are assigned here. Core input variables are set in read_config_file.
     # With the exception of config_file_name which points to the file that sets the configuration, it is advised to not set any other variable from here.
+    
+    # Exit Flag for multithreading component
     global exitFlag
-    workQueue = None
+    exitFlag = False
+    # Lock for accessing queue
     global queueLock
+    queueLock = Lock()
+    # Lock for accessing processed_hosts
     global listLock
+    listLock = Lock()
+    
+    # Hosts after they have been processed (via SSH function)
     global processed_hosts
     # processed_hosts = list[NetworkObject]
     processed_hosts = []
+    
+    # Dev mode is is set to False by default
     global devModeEnable
-    exitFlag = 0
-    queueLock = Lock()
-    listLock = Lock()
+    devModeEnable = False
+
+    workQueue = None
     threads = []
+
     command_file_name = ''
     device_file_name = ''
     output_file_name = ''
+    # Default config file name, this can be overriden at the CLI
     config_file_name = 'config.txt'
-    devModeEnable = False
+    
     zip_output = ''
     delete_output = False
     threadCount = ''
     username = ''
     filter_string = ''
+    
+    # Email parameters
     mail_to = []
     email_body = ''
     email_subject = ''
     email_username = ''
     email_password = ''
     smtpPort = ''
+
     # List for hosts read straight from device file
     raw_hosts: list[NetworkObject] = []
     # Refined list of hosts to be processed (via SSH function)
     hosts: list[NetworkObject] = []
-    # Hosts after they have been processed (via SSH function)
-    
     failed_list = []
     passed_list = []
     match_set = set()
@@ -460,7 +480,6 @@ def device_connect():
                 email_body = sys.argv[i] + '\n\n'
 
                     
-
     configFileOutput = read_config_file(config_file_name)
 
         
@@ -601,7 +620,7 @@ def device_connect():
     while not workQueue.empty():
         pass
 
-    exitFlag = 1
+    exitFlag = True
     for t in threads:
         t.join()
 
