@@ -81,8 +81,7 @@ def pretty_print_hostname(hostname: str) -> str:
 
 
 def read_config_file(config_file_name:str) -> dict:
-    """ This function reads the configuration file. Not all options have to be set. Only 3 defaults are listed here in the event that the configuration file does not have them.
-    Do not set anything in here. Either add them to the configuration file or pass them as a command line arguement.
+    """ This function reads the configuration file. Not all options have to be set.
     """
 
     parameters = {'commands': 'commands.txt',
@@ -92,7 +91,8 @@ def read_config_file(config_file_name:str) -> dict:
                   'key': '', 
                   'encryptedPassword': '',  
                   'devModeEnable': '', 
-                  'zipEnable': '',
+                  'zipEnable': 'False',
+                  'deleteFiles': 'False',
                   'sitePackagePath': '',
                   'emailSource': '',
                   'emailDestination': '',
@@ -107,29 +107,29 @@ def read_config_file(config_file_name:str) -> dict:
     }
 
     try:
-        config_file = open(config_file_name, 'r')
+        with open(config_file_name, 'r') as config_file:
+    
+            for line in config_file:
+                split_line = line.split('=')
+                # Work in a try block here
+                if split_line[0] in parameters:
+                    split_line[1] = split_line[1].rstrip('\n')
+                    # Read files for key and encrypted password and convert values to byte values to be used in decryption later
+                    if (split_line[0] == 'key' or split_line[0] == 'emailKey' or split_line[0] == 'emailEncryptedPassword') and split_line[1] != "''":
+                        try:
+                            with open(split_line[1], 'r') as read_file:
+                                single_line = read_file.readline().rstrip('\n')
+                                parameters[split_line[0]] = single_line.encode()
+                        except Exception as e:
+                            print('Failed to open file containing %s with Exception %s. This happened when trying to parse "%s" in the configuration file.' % (split_line[1], str(e), split_line[0]))
+                    elif split_line[0] == 'emailDestination':
+                        parameters[split_line[0]] = split_line[1].split(',')
+                    else:
+                        parameters[split_line[0]] = split_line[1]
+
     except Exception as e:
         print("Configuration file failed to open with this message: %s" % (str(e)))
         return parameters
-    for line in config_file:
-        split_line = line.split('=')
-        # Work in a try block here
-        if split_line[0] in parameters:
-            split_line[1] = split_line[1].rstrip('\n')
-            # Read files for key and encrypted password and convert values to byte values to be used in decryption later
-            if (split_line[0] == 'key' or split_line[0] == 'emailKey' or split_line[0] == 'emailEncryptedPassword') and split_line[1] != "''":
-                try:
-                    read_file = open(split_line[1], 'r')
-                    single_line = read_file.readline().rstrip('\n')
-                    parameters[split_line[0]] = single_line.encode()
-                    read_file.close()
-                except Exception as e:
-                    print('Failed to open file containing %s with Exception %s. This happened when trying to parse "%s" in the configuration file.' % (split_line[1], str(e), split_line[0]))
-            elif split_line[0] == 'emailDestination':
-                parameters[split_line[0]] = split_line[1].split(',')
-            else:
-                parameters[split_line[0]] = split_line[1]
-    config_file.close()
 
     return parameters
 
@@ -139,55 +139,54 @@ def read_command_file(command_file_name: str) -> dict[str, dict[str, list[str]]]
     Groups allow the same device type to have different commands run against them.
     """
     commands = {}
-    commands_file = open(command_file_name, 'r')
-    device_type = ''
-    group = "DEFAULT"
-    comment = False
-    for line in commands_file:
-        line = line.rstrip('\n\r\t')
-        if not line:
-            # Catches blank line
-            pass
-        elif line[0] == '#':
-            # Any lines enclosed by '#' is considered to be in a comment block
-            comment = not comment
-        elif line[0:2] == '//':
-            pass
-            # single line comment
-        elif line[0] == '<' and line[-1] == '>' and not comment:
-            group = line.lstrip('<').rstrip('>')
-            if group == "":
-                group = "DEFAULT"
-        elif line[0] == '[' and line[-1] == ']' and not comment:
-            # Catches line matching device type, eg: ios_xr, netscaler, etc
-            device_type = line.lstrip('[').rstrip(']')
-        elif re.search('con.* t', line) is not None:
-            # Catches conf t and its variants
-            pass
-        elif device_type == 'netscaler' and re.search('^(unbind|bind|add|rm)', line):
-            # Catches netscaler config commands
-            pass
-        elif not comment:
-            # print("Got in here: %s %s" % (group, device_type))
-            # Should match actual "commands"
-            if group not in commands:
-                commands[group] = {}
-            if device_type not in commands[group]:
-                commands[group][device_type] = []
-            if not line in commands[group][device_type]:
-                # Do nothing, first time command has been seen
+    with open(command_file_name, 'r') as commands_file:
+        device_type = ''
+        group = "DEFAULT"
+        comment = False
+        for line in commands_file:
+            line = line.rstrip('\n\r\t')
+            if not line:
+                # Catches blank line
                 pass
-            else:
-                # handle duplicate commands by appending a number to the end
-                command_count = 2
-                duplicate_line = line
-                while duplicate_line in commands[group][device_type]:
-                    duplicate_line = line + ' (instance #' + str(command_count) + ')'
-                    command_count += 1
-                line = duplicate_line
-            commands[group][device_type].append(line)
-    commands_file.close()
-
+            elif line[0] == '#':
+                # Any lines enclosed by '#' is considered to be in a comment block
+                comment = not comment
+            elif line[0:2] == '//':
+                pass
+                # single line comment
+            elif line[0] == '<' and line[-1] == '>' and not comment:
+                group = line.lstrip('<').rstrip('>')
+                if group == "":
+                    group = "DEFAULT"
+            elif line[0] == '[' and line[-1] == ']' and not comment:
+                # Catches line matching device type, eg: ios_xr, netscaler, etc
+                device_type = line.lstrip('[').rstrip(']')
+            elif re.search('con.* t', line) is not None:
+                # Catches conf t and its variants
+                pass
+            elif device_type == 'netscaler' and re.search('^(unbind|bind|add|rm)', line):
+                # Catches netscaler config commands
+                pass
+            elif not comment:
+                # print("Got in here: %s %s" % (group, device_type))
+                # Should match actual "commands"
+                if group not in commands:
+                    commands[group] = {}
+                if device_type not in commands[group]:
+                    commands[group][device_type] = []
+                if not line in commands[group][device_type]:
+                    # Do nothing, first time command has been seen
+                    pass
+                else:
+                    # handle duplicate commands by appending a number to the end
+                    command_count = 2
+                    duplicate_line = line
+                    while duplicate_line in commands[group][device_type]:
+                        duplicate_line = line + ' (instance #' + str(command_count) + ')'
+                        command_count += 1
+                    line = duplicate_line
+                commands[group][device_type].append(line)
+                
     return commands
 
 
@@ -196,40 +195,39 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
     hostname, device type, group and credential set assigned.
     """
 
-    devices_file = open(device_file_name, 'r')
-    hosts = []
-    valid_device_types = ["[cisco_asa]", "[cisco_ios]", "[cisco_xe]", "[cisco_xr]", "[netscaler]", "[cisco_nxos]", "[linux]"]
-    comment = False
-    group = "DEFAULT"
-    credential_set = "cred_default"
-    device_type = None
-    for line in devices_file:
-        hostname = line.rstrip('\n\r\t')
-        hostname = hostname.lower()
-        if not hostname:
-            pass
-            # Catches blank line
-        elif hostname[0] == '#':
-            # Any lines enclosed by '#' is considered to be in a comment block
-            comment = not comment
-        elif hostname[0:2] == '//':
-            pass
-            # single line comment
-        elif hostname in valid_device_types and not comment:
-            device_type = hostname.lstrip('[').rstrip(']')
-            # set the device_type as long as the comment flag is false
-        elif hostname[0:6] == '<cred_'  and not comment:
-            credential_set = hostname.lstrip('<').rstrip('>')
-        elif hostname[0] == '<' and hostname[-1] == '>' and not comment:
-            group = hostname.lstrip('<').rstrip('>')
-            if group == "":
-                group = "DEFAULT"
-        elif not comment and device_type:
-            hosts.append(NetworkObject(hostname, device_type, group, credential_set))
-        else:
-            pass
-            #Presumably comments
-    devices_file.close()  
+    with open(device_file_name, 'r') as devices_file:
+        hosts = []
+        valid_device_types = ["[cisco_asa]", "[cisco_ios]", "[cisco_xe]", "[cisco_xr]", "[netscaler]", "[cisco_nxos]", "[linux]"]
+        comment = False
+        group = "DEFAULT"
+        credential_set = "cred_default"
+        device_type = None
+        for line in devices_file:
+            hostname = line.rstrip('\n\r\t')
+            hostname = hostname.lower()
+            if not hostname:
+                pass
+                # Catches blank line
+            elif hostname[0] == '#':
+                # Any lines enclosed by '#' is considered to be in a comment block
+                comment = not comment
+            elif hostname[0:2] == '//':
+                pass
+                # single line comment
+            elif hostname in valid_device_types and not comment:
+                device_type = hostname.lstrip('[').rstrip(']')
+                # set the device_type as long as the comment flag is false
+            elif hostname[0:6] == '<cred_'  and not comment:
+                credential_set = hostname.lstrip('<').rstrip('>')
+            elif hostname[0] == '<' and hostname[-1] == '>' and not comment:
+                group = hostname.lstrip('<').rstrip('>')
+                if group == "" or group == "default":
+                    group = "DEFAULT"
+            elif not comment and device_type:
+                hosts.append(NetworkObject(hostname, device_type, group, credential_set))
+            else:
+                pass
+                #Presumably comments  
 
     return hosts
     
@@ -240,13 +238,12 @@ def zip_output_file(output_file_name: str, raw_output_files: list[str]) -> str:
     """
 
     zipped_output_file_name = output_file_name + '.zip'
-    zipped_output_file = ZipFile(zipped_output_file_name, mode="w", compression=ZIP_DEFLATED)
-    for raw_output_file in raw_output_files:
-        try:    
-            zipped_output_file.write(os.path.join(output_file_name, raw_output_file), raw_output_file)
-        except Exception as e:
-            print("Writing to zipfile failed with error: %s" % (str(e)))
-    zipped_output_file.close()
+    with ZipFile(zipped_output_file_name, mode="w", compression=ZIP_DEFLATED) as zipped_output_file:
+        for raw_output_file in raw_output_files:
+            try:    
+                zipped_output_file.write(os.path.join(output_file_name, raw_output_file), raw_output_file)
+            except Exception as e:
+                print("Writing to zipfile failed with error: %s" % (str(e)))
     os.chmod(zipped_output_file_name, 0o666)
 
     return zipped_output_file_name
@@ -366,7 +363,7 @@ def get_passwords(username: str, cred_name: str) -> dict:
 
 
 def timer(func):
-    """ Wrappter function used to time the program run time.
+    """ Wrapper function used to time the program run time.
     """
 
     def wrapper():
@@ -406,16 +403,16 @@ def device_connect():
 
     workQueue = None
     threads = []
+    threadCount = None
 
-    command_file_name = ''
-    device_file_name = ''
-    output_file_name = ''
+    command_file_name = None
+    device_file_name = None
+    output_file_name = None
     # Default config file name, this can be overriden at the CLI
     config_file_name = 'config.txt'
     
-    zip_output = ''
-    delete_output = False
-    threadCount = ''
+    zip_output = None
+    delete_output = None
     username = ''
     filter_string = ''
     
@@ -545,7 +542,6 @@ def device_connect():
             host.password = key_chain[host.credential_set]['password']
             host.secret = key_chain[host.credential_set]['secret']
             hosts.append(host)
-            # print(host.__dict__)
         except KeyError as e:
             host.result = 'fail'
             host.error = f'According to device file the credential is {str(e)}, but no such credential exists in the credentials file'
@@ -554,6 +550,25 @@ def device_connect():
     
     # End of mandatory values
     # sys.exit() 
+
+    if not zip_output:
+        if configFileOutput['zipEnable'] == 'True':
+            zip_output = True
+        elif configFileOutput['zipEnable'] == 'False':
+            zip_output = False
+
+    if not delete_output:
+        if configFileOutput['deleteFiles'] == 'True':
+            delete_output = True
+        elif configFileOutput['deleteFiles'] == 'False':
+            delete_output = False
+
+
+    # Logging configuration to troubleshoot netmiko issues
+    if devModeEnable:    
+        '''logging.basicConfig(filename='logs/netmiko_debug.log', level=logging.DEBUG)
+        logger = logging.getLogger("netmiko")'''
+
 
     if not email_subject:
         email_subject = configFileOutput['emailSubject']
@@ -571,11 +586,7 @@ def device_connect():
         except:
             pass
 
-    if not zip_output:
-        if configFileOutput['zipEnable'] == 'True':
-            zip_output = True
-        elif configFileOutput['zipEnable'] == 'False':
-            zip_output = False
+
     emailSource = configFileOutput['emailSource']
     smtpServer = configFileOutput['smtpServer']
     # Check to see if mail passwords are set: ie, secure SMTP server authentication
@@ -585,11 +596,6 @@ def device_connect():
 
 
     mail_to += configFileOutput['emailDestination']
-
-    # Logging configuration to troubleshoot netmiko issues
-    if devModeEnable:    
-        '''logging.basicConfig(filename='logs/netmiko_debug.log', level=logging.DEBUG)
-        logger = logging.getLogger("netmiko")'''
 
 
     print("\n\nAttempting connecting to hosts:\n\n")
@@ -677,9 +683,12 @@ def device_connect():
     #    When SPLIT is invoked to produce individual output files per device, there are two paths to take. Zipped and unzipped.
     #    If Zip is set:
     #     - then the local dir with the raw files is deleted. But the zip file will remain locally and also emailed.
+    #     - to delete the zipped local file as well, you need delete_output = True, that is adding the --delete on the command line or
+    #    setting the equivalent in the config file.
     #    If zip is not set:
     #     - File will not be emailed, files will not be zipped. Local dir and raw files are kept.
-
+    #     - Setting the delete flag here has no effect on the files above
+    #     - No email can be sent, you must have the zip flag
 
     elif output_file_name == "SPLIT":
         output_dirpath = "output_" + time.strftime("%Y%m%d_%H%M%S")
@@ -688,15 +697,14 @@ def device_connect():
         for processed_host in processed_hosts:
             if processed_host.result == 'success':
                 try:
-                    output_file = open(os.path.join(output_dirpath, processed_host.hostname + ".txt"),'w')
-                    output_file.write(pretty_print_hostname(processed_host.hostname))
-                    for command in processed_host.outputs:
-                        output_file.write("--------- %s " % command)
-                        tail = ''
-                        for i in range(57 - len(command)): #Might need to catch here for long commands
-                            tail += '-'
-                        output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
-                    output_file.close()
+                    with open(os.path.join(output_dirpath, processed_host.hostname + ".txt"),'w') as output_file:
+                        output_file.write(pretty_print_hostname(processed_host.hostname))
+                        for command in processed_host.outputs:
+                            output_file.write("--------- %s " % command)
+                            tail = ''
+                            for i in range(57 - len(command)): #Might need to catch here for long commands
+                                tail += '-'
+                            output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
                     passed_list.append(processed_host)
                 except IOError as e:
                     print("\nCould not open input file. IOError with message: %s\n\n" % (str(e)))
@@ -727,6 +735,8 @@ def device_connect():
                 print("\n\nEmail sent")
             except Exception as e2:
                 print("\n\nEmail not sent,", "Error message: " + str(e2))
+
+            # If delete is set, this removes the zip file, leaving no output on the host machine. Use this if you are counting on the email for output data.
             if delete_output:
                 try:
                     os.remove(output_file_name)
@@ -739,27 +749,26 @@ def device_connect():
     else:
     
         try:     
-            output_file = open(output_file_name,'w')
+            with open(output_file_name,'w') as output_file:
+            ####Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set####
+                for processed_host in processed_hosts:
+                    if processed_host.result == 'success':
+                        output_file.write(pretty_print_hostname(processed_host.hostname))
+                        for command in processed_host.outputs:
+                            output_file.write("--------- %s " % command)
+                            tail = ''
+                            for i in range(57 - len(command)): #Might need to catch here for long commands
+                                tail += '-'
+                            output_file.write("%s\n%s\n\n" % (tail, processed_host.outputs[command]))
+                        passed_list.append(processed_host)
+                    ####Hosts that failed are appended to a list#####
+                    elif processed_host.result == 'fail':
+                        failed_list.append(processed_host)
+
         except IOError as e:
             print("\nCould not open output file. IOError with message: %s\n\n" % (str(e)))
             sys.exit()
-
-    ####Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set####
-        for processed_host in processed_hosts:
-            if processed_host.result == 'success':
-                output_file.write(pretty_print_hostname(processed_host.hostname))
-            
-                for command in processed_host.outputs:
-                    output_file.write("--------- %s " % command)
-                    tail = ''
-                    for i in range(57 - len(command)): #Might need to catch here for long commands
-                        tail += '-'
-                    output_file.write("%s\n%s\n\n" % (tail, processed_host.outputs[command]))
-                passed_list.append(processed_host)
-            ####Hosts that failed are appended to a list#####
-            elif processed_host.result == 'fail':
-                failed_list.append(processed_host)
-        output_file.close()
+        
         if len(passed_list) != 0:
             passed_list_string = "\n\nCommand was successful on the following devices:\n\n"
             for host in passed_list:
@@ -771,8 +780,10 @@ def device_connect():
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string         
     
-        # Look at zipping the file if it is too large
+        
         # ADD BLOCK for catching empty output file
+
+        # Zip flag or file over 5MB forces zipping. Once zipped, original file removed.
         if os.stat(output_file_name).st_size > 5000000 or zip_output is True:
             print("\n\nFile size is greater than 5MB or compress flag set: output file will be compressed")
             try:
@@ -791,12 +802,14 @@ def device_connect():
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent,", "Error message: " + str(e))
-            
+        
+
+        # Deletes output file (zipped or unzipped). Use this if you are relying on email to get the output out. This is set with --delete on the CLI
         if delete_output:
             try:
                 os.remove(output_file_name)
             except OSError as e:
-                print("Error deleting local zip file. Error: %s - %s." % (e.filename, e.strerror))          
+                print("Error deleting local file. Error: %s - %s." % (e.filename, e.strerror))          
 
 
     # Generating end of program summary, reusing email body here
