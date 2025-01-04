@@ -33,16 +33,19 @@ class NetworkObject:
 
 
 class MyThread (Thread):
-    """ 
+    """ Class that defines thread objects. This allows use of multithreading the ssh function.
     """
 
-    def __init__(self, threadID, q, commands):
+    def __init__(self, threadID: str, q: queue.Queue, commands: dict[str, dict[str, list[str]]]):
         Thread.__init__(self)
         self.threadID = threadID
         self.q = q
         self.commands = commands
 
     def run(self):
+        """ Calls ssh function for a particular thread instance. 'q' contains the network objects
+        """
+
         print("Starting thread ID:  "+str(self.threadID))
         ssh_command(self.threadID, self.q, self.commands)
         print("Ending thread ID:  "+str(self.threadID))
@@ -247,13 +250,14 @@ def zip_output_file(output_file_name: str, raw_output_files: list[str]) -> str:
     return zipped_output_file_name
 
 
-
-
-
 def ssh_command(threadID, q, commands):
+    """ SSH function. Takes objects of a queue and runs the appropriate commands against this. This is function is used by multiple threads, hence the queueLock 
+    when accessing the object queue. Likewise when storing results in the list of network objects, a listLock is utilized.
+    """
+
     while not exitFlag:
         queueLock.acquire()
-        if not workQueue.empty():
+        if not q.empty():
             host = q.get()
             queueLock.release()
             attempt_number = 1
@@ -322,6 +326,7 @@ def ssh_command(threadID, q, commands):
 
 def get_password() -> str:
     '''Basic function for getting a password'''
+
     while True:
         password = getpass.getpass('Enter the password: ')
         confirm_password = getpass.getpass('Please reconfirm password: ')
@@ -336,6 +341,7 @@ def get_password() -> str:
 
 def get_passwords(username: str, cred_name: str) -> dict:
     '''Creates 2 passwords and returns them in a JSON dict format'''
+
     password = get_password()
     next_password = input('''Is there another password required for higher privileges 
     that is different from the previous password?''')
@@ -348,6 +354,9 @@ def get_passwords(username: str, cred_name: str) -> dict:
 
 
 def timer(func):
+    """ Wrappter function used to time the program run time.
+    """
+
     def wrapper():
         start_time = time.time()
         func()
@@ -357,10 +366,14 @@ def timer(func):
 
 @timer
 def device_connect():
+    """ Effectively the main function. Defines the core code and makes use of all other functions in this file.
+    """
+
+
     # Variable initializations. Only 2 variables are assigned here. Core input variables are set in read_config_file.
     # With the exception of config_file_name which points to the file that sets the configuration, it is advised to not set any other variable from here.
     global exitFlag
-    global workQueue
+    workQueue = None
     global queueLock
     global listLock
     global processed_hosts
