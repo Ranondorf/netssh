@@ -89,8 +89,7 @@ def read_config_file(config_file_name:str) -> dict:
                   'output': 'output.txt',
                   'username': '', 
                   'key': '', 
-                  'encryptedPassword': '',  
-                  'devModeEnable': '', 
+                  'encryptedPassword': '', 
                   'zipEnable': 'False',
                   'deleteFiles': 'False',
                   'sitePackagePath': '',
@@ -261,7 +260,6 @@ def ssh_command(threadID: str, q: Queue, commands):
     global queueLock
     global listLock
     global processed_hosts
-    global devModeEnable
 
 
     while not exitFlag:
@@ -276,12 +274,8 @@ def ssh_command(threadID: str, q: Queue, commands):
             #A specific catch needs to be made to see if commandSubset fails
             while not process_next_ConnectHandler and attempt_number < max_retries + 1:
                 try:
-                    if devModeEnable:
-                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=host.username, password=host.password,
-                        secret=host.secret, timeout=10, session_log='logs/netmiko_session_output/'+host.hostname+'.log')
-                    else:
-                        net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=host.username, password=host.password,
-                        secret=host.secret, timeout=10)
+                    net_connect = ConnectHandler(device_type=host.device_type, host=host.hostname, username=host.username, password=host.password,
+                    secret=host.secret, timeout=10)
                     process_next_ConnectHandler = True
                 except Exception as e:
                     print('%s failed on login attempt %s' % (host.hostname, attempt_number))
@@ -397,9 +391,6 @@ def device_connect():
     # processed_hosts = list[NetworkObject]
     processed_hosts = []
     
-    # Dev mode is is set to False by default
-    global devModeEnable
-    devModeEnable = False
 
     workQueue = None
     threads = []
@@ -424,7 +415,7 @@ def device_connect():
     email_password = ''
     smtpPort = ''
 
-    # List for hosts read straight from device file
+    # List for hosts read straight from device
     raw_hosts: list[NetworkObject] = []
     # Refined list of hosts to be processed (via SSH function)
     hosts: list[NetworkObject] = []
@@ -463,8 +454,6 @@ def device_connect():
             elif sys.argv[i] == '-t':
                 i += 1
                 threadCount = int(sys.argv[i])
-            elif sys.argv[i] == '-D':
-                devModeEnable = True
             elif sys.argv[i] == '-z':
                 zip_output = True
             elif sys.argv[i] == '--delete':
@@ -565,9 +554,6 @@ def device_connect():
 
 
     # Logging configuration to troubleshoot netmiko issues
-    if devModeEnable:    
-        '''logging.basicConfig(filename='logs/netmiko_debug.log', level=logging.DEBUG)
-        logger = logging.getLogger("netmiko")'''
 
 
     if not email_subject:
