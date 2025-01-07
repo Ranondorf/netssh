@@ -121,7 +121,7 @@ def read_config_file(config_file_name:str) -> dict:
                                 single_line = read_file.readline().rstrip('\n')
                                 parameters[split_line[0]] = single_line.encode()
                         except Exception as e:
-                            print('Failed to open file containing %s with Exception %s. This happened when trying to parse "%s" in the configuration file.' % (split_line[1], str(e), split_line[0]))
+                            print('Failed to open file containing %s with Exception %s. This happened when trying to parse "%s" in the configuration file.' % (split_line[1], e, split_line[0]))
                     elif split_line[0] == 'emailDestination':
                         parameters[split_line[0]] = split_line[1].split(',')
                     elif (split_line[0] == 'zipEnable' or split_line[0] == 'deleteFiles' or split_line[0] == 'useTls'):
@@ -133,7 +133,7 @@ def read_config_file(config_file_name:str) -> dict:
                         parameters[split_line[0]] = split_line[1]
 
     except Exception as e:
-        print("Configuration file failed to open with this message: %s" % (str(e)))
+        print("Configuration file failed to open with this message: %s" % e)
         return parameters
 
     return parameters
@@ -251,7 +251,7 @@ def zip_output_file(output_file_name: str, raw_output_files: list[str]) -> str:
             try:   
                 zipped_output_file.write(os.path.join(output_file_name, raw_output_file), raw_output_file)
             except Exception as e:
-                print("Writing to zipfile failed with error: %s" % (str(e)))
+                print("Writing to zipfile failed with error: %s" % e)
     os.chmod(zipped_output_file_name, 0o666)
 
     return zipped_output_file_name
@@ -290,14 +290,14 @@ def ssh_command(threadID: str, q: Queue, commands):
                     print('%s failed on login attempt %s' % (host.hostname, attempt_number))
                     if attempt_number == max_retries:
                         host.result = 'fail'
-                        host.error = str(e)
+                        host.error = e
                     attempt_number += 1                            
             try:
                 commandSubset = commands[host.group][host.device_type]
             except Exception as e:
-                print('Failed assigning a list of commands to host %s, group %s and device type %s : %s' % (host.hostname, host.group, host.device_type, str(e)))
+                print('Failed assigning a list of commands to host %s, group %s and device type %s : %s' % (host.hostname, host.group, host.device_type, e))
                 host.result = 'fail'
-                host.error = str(e)
+                host.error = e
                 process_next_ConnectHandler = False
 
             if process_next_ConnectHandler:
@@ -313,7 +313,7 @@ def ssh_command(threadID: str, q: Queue, commands):
                             print('%s failed on attempt %s for command , \'%s\'' % (host.hostname, attempt_number, raw_command))
                             if attempt_number == max_retries:
                                 host.result = 'fail'
-                                host.error = str(e)
+                                host.error = e
                                 process_next_ConnectHandler = False
                             attempt_number += 1    
                 # At this stage the function should start the exit process
@@ -496,7 +496,7 @@ def device_connect():
         commands = read_command_file(command_file_name)
         raw_hosts = read_device_file(device_file_name)
     except IOError as e:
-        print("\nCould not open required input file (make sure there are no typos or if the file exists). IOError with message: %s\n\n" % (str(e)))
+        print("\nCould not open required input file (make sure there are no typos or if the file exists). IOError with message: %s\n\n" % e)
         sys.exit()
     
     
@@ -517,7 +517,7 @@ def device_connect():
         
 
         except Exception as e:
-            print("\nSomething went wrong with encryption key file or key chain file. Please make sure they are properly defined. IOError with message: %s\n\n" % (str(e)))
+            print("\nSomething went wrong with encryption key file or key chain file. Please make sure they are properly defined. IOError with message: %s\n\n" % e)
             sys.exit()
 
 
@@ -546,7 +546,7 @@ def device_connect():
             hosts.append(host)
         except KeyError as e:
             host.result = 'fail'
-            host.error = f'According to device file the credential is {str(e)}, but no such credential exists in the credentials file'
+            host.error = f'According to device file the credential is {e}, but no such credential exists in the credentials file'
             failed_list.append(host)
 
     
@@ -673,7 +673,7 @@ def device_connect():
             mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, None, smtpServer, smtp_port, use_tls, email_username, email_password)
             print("\n\nEmail sent")
         except Exception as e:
-            print("\n\nEmail not sent,", "Error message: " + str(e))
+            print("\n\nEmail not sent,", "Error message: " + e)
 
 
     # #################################################
@@ -706,7 +706,7 @@ def device_connect():
                             output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
                     passed_list.append(processed_host)
                 except IOError as e:
-                    print("\nCould not open input file. IOError with message: %s\n\n" % (str(e)))
+                    print("\nCould not open input file. IOError with message: %s\n\n" % e)
                     sys.exit()
             ####Hosts that failed are appended to a list#####
             elif processed_host.result == 'fail':
@@ -733,7 +733,7 @@ def device_connect():
                 mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls, email_username, email_password)
                 print("\n\nEmail sent")
             except Exception as e2:
-                print("\n\nEmail not sent,", "Error message: " + str(e2))
+                print("\n\nEmail not sent,", "Error message: " + e2)
 
             # If delete is set, this removes the zip file, leaving no output on the host machine. Use this if you are counting on the email for output data.
             if delete_output:
@@ -765,7 +765,7 @@ def device_connect():
                         failed_list.append(processed_host)
 
         except IOError as e:
-            print("\nCould not open output file. IOError with message: %s\n\n" % (str(e)))
+            print("\nCould not open output file. IOError with message: %s\n\n" % e)
             sys.exit()
         
         if len(passed_list) != 0:
@@ -791,7 +791,7 @@ def device_connect():
                 os.remove(old_output_file_name)
             except Exception as e:
                 print("\n\nUnable to compress file")
-                print("Error generated is: "+str(e))
+                print("Error generated is: " + e)
                 # Unset mail_to prevent email being sent
                 mail_to = [] 
             # os.chmod(output_file_name,0o666)
@@ -800,7 +800,7 @@ def device_connect():
             mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls,  email_username, email_password)
             print("\n\nEmail sent")
         except Exception as e:
-            print("\n\nEmail not sent,", "Error message: " + str(e))
+            print("\n\nEmail not sent,", "Error message: " + e)
         
 
         # Deletes output file (zipped or unzipped). Use this if you are relying on email to get the output out. This is set with --delete on the CLI
@@ -831,5 +831,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        print(str(e))
+        print(e)
         os._exit(1)
