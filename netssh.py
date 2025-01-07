@@ -451,11 +451,14 @@ def device_connect():
             elif sys.argv[i] == '-f':
                 i += 1
                 config_file_name = sys.argv[i]
+            # Manually set the thread count
             elif sys.argv[i] == '-t':
                 i += 1
                 threadCount = int(sys.argv[i])
+            # Zips the output files. This is False by default, -z turns it on.
             elif sys.argv[i] == '-z':
                 zip_output = True
+            # Delete the output files. This is False by default, --delete turns it on.
             elif sys.argv[i] == '--delete':
                 delete_output = True
             elif sys.argv[i] == '--subject':

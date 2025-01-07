@@ -42,10 +42,6 @@ def write_credentials(key_chain: dict, file_name: str):
 
 
 def create_key_chain():
-    welcome = """This is the encrypted password generator for netssh. Using this allows you to stick encrypted passwords in files
-    please follow the prompts."""
-    print(welcome)
-
 
 
     current = 'cred_default'
@@ -78,20 +74,46 @@ def create_key_chain():
 
     
     # print(key_chain)
+    creds_filename = "creds.json"
+    write_credentials(key_chain, creds_filename)
     
-    write_credentials(key_chain, "creds.json")
-
-    with open('enc_key', 'w') as enc_file:
+    enc_key_filename = 'enc_key'
+    with open(enc_key_filename, 'w') as enc_file:
         enc_file.write(encryption_key.decode())
 
 
+    print(f'\n\nThe encryption file is {enc_key_filename} and the credentials file is {creds_filename}')
+
+
+def one_off_password():
+    encryption_key = Fernet.generate_key()
+    f = Fernet(encryption_key)
+
+    unencrypted_password = get_password()
+    token = f.encrypt(unencrypted_password.encode())
+
+    print(f'Encryption key: {encryption_key.decode()}\nEncrypted password: {token.decode()}')
 
 
 def main():
     welcome = """This is the encrypted password generator for netssh. Using this allows you to stick encrypted passwords in files
     please follow the prompts."""
+    print(welcome)
  
-    create_key_chain()
+    while True:
+        try:
+            option = int(input("Would you like to create a credential chain (1) or a single password (2)?:"))
+        except TypeError as e:
+            print(f'Invalid input with error as {str(e)}')
+        else:
+            if option == 1:
+                create_key_chain()
+                break
+            elif option == 2:
+                one_off_password()
+                break
+            else:
+                print("Invalid input. Please enter 1 or 2")
 
 
 if __name__ == '__main__':
