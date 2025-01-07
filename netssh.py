@@ -413,17 +413,17 @@ def device_connect():
     
     zip_output = None
     delete_output = None
-    username = ''
+    username = None
     filter_string = ''
     
     # Email parameters
     mail_to = []
-    email_body = ''
-    email_subject = ''
-    email_username = ''
-    email_password = ''
-    smtp_port = ''
-    use_tls = ''
+    email_body = None
+    email_subject = None
+    email_username = None
+    email_password = None
+    smtp_port = None
+    use_tls = None
 
     # List for hosts read straight from device
     raw_hosts: list[NetworkObject] = []
@@ -502,7 +502,6 @@ def device_connect():
     
     # Sys argv block above checks if username was passed with -u on command line, this takes precedence
     if username:
-        # Change this into a function that takes the username and returns JSON style dictionary
         key_chain = get_passwords(username, 'cred_default')
     
 
@@ -669,11 +668,9 @@ def device_connect():
             for host in failed_list:
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string
-        try:
-            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, None, smtpServer, smtp_port, use_tls, email_username, email_password)
-            print("\n\nEmail sent")
-        except Exception as e:
-            print("\n\nEmail not sent,", "Error message: " + e)
+
+        mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, None, smtpServer, smtp_port, use_tls, email_username, email_password)
+
 
 
     # #################################################
@@ -729,11 +726,9 @@ def device_connect():
                 shutil.rmtree(output_dirpath)
             except OSError as e:
                 print("Error deleting directory after zipping file. Error: %s - %s." % (e.filename, e.strerror))
-            try:
-                mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls, email_username, email_password)
-                print("\n\nEmail sent")
-            except Exception as e2:
-                print("\n\nEmail not sent,", "Error message: " + e2)
+            
+            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls, email_username, email_password)
+
 
             # If delete is set, this removes the zip file, leaving no output on the host machine. Use this if you are counting on the email for output data.
             if delete_output:
@@ -796,11 +791,9 @@ def device_connect():
                 mail_to = [] 
             # os.chmod(output_file_name,0o666)
 
-        try:
-            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls,  email_username, email_password)
-            print("\n\nEmail sent")
-        except Exception as e:
-            print("\n\nEmail not sent,", "Error message: " + e)
+        
+        mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls,  email_username, email_password)
+
         
 
         # Deletes output file (zipped or unzipped). Use this if you are relying on email to get the output out. This is set with --delete on the CLI
