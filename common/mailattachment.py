@@ -6,10 +6,25 @@ from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 
 
-def send_mail(send_from, send_to, subject, text, files=None,
-              server="127.0.0.1", port=25, username=None, password=None):
-
-    assert isinstance(send_to, list)
+def send_mail(send_from: str, 
+              send_to: list[str], 
+              subject: str, 
+              text:str, 
+              files: list[str]=None,
+              server: str="127.0.0.1", 
+              port: int=25,
+              use_tls: bool=True, 
+              username: str=None, 
+              password: str=None):
+    
+    ''' Send an email using an SMTP server. Authentication is optional. 
+    
+    Please note that google relies on authentication and uses port 587 for SMTP.
+    Function takes a list of email destinations as well as a list of files.
+    
+    At a minimum, the only things that do not have to be set to use the function are "subject", "text" and "files", when using google smtp.
+    
+    '''
 
 
     msg = MIMEMultipart()
@@ -33,8 +48,11 @@ def send_mail(send_from, send_to, subject, text, files=None,
 
     smtp = smtplib.SMTP(server, port)
     # Check if username is set, enables TLS if username is detected
-    if username:
+    if use_tls:
         smtp.starttls()
+
+    if username:
         smtp.login(username, password)
+
     smtp.sendmail(send_from, send_to, msg.as_string())
     smtp.close()

@@ -102,6 +102,7 @@ def read_config_file(config_file_name:str) -> dict:
                   'emailKey': '', 
                   'emailEncryptedPassword': '', 
                   'smtpPort': '',
+                  'useTls' : 'True',
                   'smtpServer': ''
     }
 
@@ -414,6 +415,7 @@ def device_connect():
     email_username = ''
     email_password = ''
     smtpPort = ''
+    use_tls = ''
 
     # List for hosts read straight from device
     raw_hosts: list[NetworkObject] = []
@@ -569,6 +571,14 @@ def device_connect():
         smtpPort = configFileOutput['smtpPort']
     if not email_username:
         email_username = configFileOutput['emailUsername']
+    if not use_tls:
+        if configFileOutput['useTls'] == 'True':
+            print("got in")
+            use_tls = True
+        elif configFileOutput['useTls'] == 'False':
+            use_tls = False
+    
+    
     if not threadCount:
         try:
             threadCount = int(configFileOutput['threadCount'])
@@ -660,7 +670,7 @@ def device_connect():
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string
         try:
-            mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,None,smtpServer,smtpPort,email_username,email_password)
+            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, None, smtpServer, smtpPort, use_tls, email_username, email_password)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent,", "Error message: " + str(e))
@@ -720,7 +730,7 @@ def device_connect():
             except OSError as e:
                 print("Error deleting directory after zipping file. Error: %s - %s." % (e.filename, e.strerror))
             try:
-                mailattachment.send_mail(emailSource,mail_to,email_subject,email_body,[output_file_name],smtpServer,smtpPort,email_username,email_password)
+                mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtpPort, use_tls, email_username, email_password)
                 print("\n\nEmail sent")
             except Exception as e2:
                 print("\n\nEmail not sent,", "Error message: " + str(e2))
@@ -787,7 +797,7 @@ def device_connect():
             # os.chmod(output_file_name,0o666)
 
         try:
-            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtpPort, email_username, email_password)
+            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtpPort, use_tls,  email_username, email_password)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent,", "Error message: " + str(e))
