@@ -90,8 +90,8 @@ def read_config_file(config_file_name:str) -> dict:
                   'username': '', 
                   'key': '', 
                   'encryptedPassword': '', 
-                  'zipEnable': 'False',
-                  'deleteFiles': 'False',
+                  'zipEnable': False,
+                  'deleteFiles': False,
                   'sitePackagePath': '',
                   'emailSource': '',
                   'emailDestination': '',
@@ -102,7 +102,7 @@ def read_config_file(config_file_name:str) -> dict:
                   'emailKey': '', 
                   'emailEncryptedPassword': '', 
                   'smtpPort': '',
-                  'useTls' : 'True',
+                  'useTls' : True,
                   'smtpServer': ''
     }
 
@@ -113,7 +113,7 @@ def read_config_file(config_file_name:str) -> dict:
                 split_line = line.split('=')
                 # Work in a try block here
                 if split_line[0] in parameters:
-                    split_line[1] = split_line[1].rstrip('\n')
+                    split_line[1] = split_line[1].rstrip(' \t\n')
                     # Read files for key and encrypted password and convert values to byte values to be used in decryption later
                     if (split_line[0] == 'key' or split_line[0] == 'emailKey' or split_line[0] == 'emailEncryptedPassword') and split_line[1] != "''":
                         try:
@@ -124,6 +124,11 @@ def read_config_file(config_file_name:str) -> dict:
                             print('Failed to open file containing %s with Exception %s. This happened when trying to parse "%s" in the configuration file.' % (split_line[1], str(e), split_line[0]))
                     elif split_line[0] == 'emailDestination':
                         parameters[split_line[0]] = split_line[1].split(',')
+                    elif (split_line[0] == 'zipEnable' or split_line[0] == 'deleteFiles' or split_line[0] == 'useTls'):
+                        if split_line[1].lower() == 'false':
+                            parameters[split_line[0]] = False
+                        elif split_line[1].lower() == 'true':
+                            parameters[split_line[0]] = True
                     else:
                         parameters[split_line[0]] = split_line[1]
 
@@ -233,14 +238,17 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
     
 
 def zip_output_file(output_file_name: str, raw_output_files: list[str]) -> str:
-    """ Takes the prefix for the output file name and a list of files to be zipped. Zips the list of files into an 
-    archive '<output_file_name>.zip'. Returns a string representing the zip file's name.
+    """ This function works in 2 ways. One way is when a list of more than one output files are presented. In this case output_file_name is a directory.
+    But if the list is a single output file, then it is expected that output_file_name is an empty string.
     """
+    if len(raw_output_files) > 1:
+        zipped_output_file_name = output_file_name + '.zip'
+    elif len(raw_output_files) == 1:
+        zipped_output_file_name = raw_output_files[0] + '.zip'
 
-    zipped_output_file_name = output_file_name + '.zip'
     with ZipFile(zipped_output_file_name, mode="w", compression=ZIP_DEFLATED) as zipped_output_file:
         for raw_output_file in raw_output_files:
-            try:    
+            try:   
                 zipped_output_file.write(os.path.join(output_file_name, raw_output_file), raw_output_file)
             except Exception as e:
                 print("Writing to zipfile failed with error: %s" % (str(e)))
@@ -414,7 +422,7 @@ def device_connect():
     email_subject = ''
     email_username = ''
     email_password = ''
-    smtpPort = ''
+    smtp_port = ''
     use_tls = ''
 
     # List for hosts read straight from device
@@ -546,16 +554,11 @@ def device_connect():
     # sys.exit() 
 
     if not zip_output:
-        if configFileOutput['zipEnable'] == 'True':
-            zip_output = True
-        elif configFileOutput['zipEnable'] == 'False':
-            zip_output = False
+        zip_output = configFileOutput['zipEnable']
+
 
     if not delete_output:
-        if configFileOutput['deleteFiles'] == 'True':
-            delete_output = True
-        elif configFileOutput['deleteFiles'] == 'False':
-            delete_output = False
+        delete_output = configFileOutput['deleteFiles']
 
 
     # Logging configuration to troubleshoot netmiko issues
@@ -567,16 +570,13 @@ def device_connect():
         email_subject = 'Output File for script: %s' % os.path.basename(__file__)
     if not email_body:
         email_body = configFileOutput['emailBody']
-    if not smtpPort:
-        smtpPort = configFileOutput['smtpPort']
+    if not smtp_port:
+        smtp_port = configFileOutput['smtpPort']
     if not email_username:
         email_username = configFileOutput['emailUsername']
     if not use_tls:
-        if configFileOutput['useTls'] == 'True':
-            print("got in")
-            use_tls = True
-        elif configFileOutput['useTls'] == 'False':
-            use_tls = False
+        use_tls = configFileOutput['useTls']
+
     
     
     if not threadCount:
@@ -670,7 +670,7 @@ def device_connect():
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string
         try:
-            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, None, smtpServer, smtpPort, use_tls, email_username, email_password)
+            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, None, smtpServer, smtp_port, use_tls, email_username, email_password)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent,", "Error message: " + str(e))
@@ -730,7 +730,7 @@ def device_connect():
             except OSError as e:
                 print("Error deleting directory after zipping file. Error: %s - %s." % (e.filename, e.strerror))
             try:
-                mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtpPort, use_tls, email_username, email_password)
+                mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls, email_username, email_password)
                 print("\n\nEmail sent")
             except Exception as e2:
                 print("\n\nEmail not sent,", "Error message: " + str(e2))
@@ -787,7 +787,7 @@ def device_connect():
             print("\n\nFile size is greater than 5MB or compress flag set: output file will be compressed")
             try:
                 old_output_file_name = output_file_name
-                output_file_name = zip_output_file(output_file_name, [output_file_name])
+                output_file_name = zip_output_file('', [output_file_name])
                 os.remove(old_output_file_name)
             except Exception as e:
                 print("\n\nUnable to compress file")
@@ -797,7 +797,7 @@ def device_connect():
             # os.chmod(output_file_name,0o666)
 
         try:
-            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtpPort, use_tls,  email_username, email_password)
+            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls,  email_username, email_password)
             print("\n\nEmail sent")
         except Exception as e:
             print("\n\nEmail not sent,", "Error message: " + str(e))
