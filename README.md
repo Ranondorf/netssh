@@ -27,9 +27,12 @@ Requirements:
 ## Installation
 ### Prequisites
 
-- Relies on Python modules that can be installed via PIP (Netmiko being the main one). Python3 is required.
+- Python 3
+- pip install netmiko
+
 ### Installing Program
-Clone this GIT repo to a directory on the local machine. However when calling the script call it from a separate folder. Copy ouput, devices, commands and config files to the calling folder.
+- Clone this GIT repo to a directory on the local machine.
+- However when calling the script call it from a separate folder. Copy output, devices, commands and config files to the calling folder.
 
 For example, setup like this
 
@@ -38,6 +41,17 @@ For example, setup like this
 /..some other path.../workding_dir/
 
 Copy devices, commands and config files to the working_dir folder from script_input_files. Then call netssh from that working_dir folder.
+
+cd /..some other path.../workding_dir/
+python3 ../netssh/netssh.py
+
+
+### Sample Usecases
+
+
+
+
+
 
 ## Credits
 Ruwan Samaranayake
