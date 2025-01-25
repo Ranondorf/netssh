@@ -40,10 +40,24 @@ For example, setup like this
 
 /..some other path.../workding_dir/
 
+
+### Running Program
+
+At a minimum you require the:
+
+- devices file ("devices.txt")
+- commands file ("commands.txt")
+
+
+
 Copy devices, commands and config files to the working_dir folder from script_input_files. Then call netssh from that working_dir folder.
 
 cd /..some other path.../workding_dir/
+
 python3 ../netssh/netssh.py
+
+
+
 
 
 ### Sample Usecases
