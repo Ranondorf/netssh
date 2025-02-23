@@ -153,14 +153,15 @@ def read_command_file(command_file_name: str) -> dict[str, dict[str, list[str]]]
             if not line:
                 # Catches blank line
                 pass
-            elif line[0] == '#':
-                # Any lines enclosed by '#' is considered to be in a comment block
-                comment = not comment
-            elif line[0:2] == '//':
+            # Single line comment
+            elif line[0:3] == '"""' and line[-3:] == '"""' and len(line) >= 6 or line[0] == '#':
                 pass
-                # single line comment
+            # Any lines enclosed by '#' is considered to be in a commeynt block
+            elif line[0:3] == '"""' or line[-3:] == '"""':
+                comment = not comment
             elif line[0] == '<' and line[-1] == '>' and not comment:
                 group = line.lstrip('<').rstrip('>')
+                # Shortcut to specify default group, that is you can type <> instead of <DEFAULT>
                 if group == "":
                     group = "DEFAULT"
             elif line[0] == '[' and line[-1] == ']' and not comment:
@@ -202,7 +203,15 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
 
     with open(device_file_name, 'r') as devices_file:
         hosts = []
-        valid_device_types = ["[cisco_asa]", "[cisco_ios]", "[cisco_xe]", "[cisco_xr]", "[netscaler]", "[cisco_nxos]", "[linux]"]
+        valid_device_types = [
+            "[cisco_asa]", 
+            "[cisco_ios]", 
+            "[cisco_xe]", 
+            "[cisco_xr]", 
+            "[netscaler]", 
+            "[cisco_nxos]", 
+            "[linux]"
+            ]
         comment = False
         group = "DEFAULT"
         credential_set = "cred_default"
@@ -210,15 +219,17 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
         for line in devices_file:
             hostname = line.rstrip('\n\r\t')
             hostname = hostname.lower()
+            # Used to test if the current line is blank
             if not hostname:
                 pass
-                # Catches blank line
-            elif hostname[0] == '#':
-                # Any lines enclosed by '#' is considered to be in a comment block
-                comment = not comment
-            elif hostname[0:2] == '//':
+            # Catches comments that are only a single line
+            elif (hostname[0:3] == '"""' and hostname[-3:] == '"""' and len(hostname) >= 6
+                or hostname[0] == '#'):
                 pass
-                # single line comment
+            # Toggles block comments. An unterminated block will be
+            # considered to be run till EOF 
+            elif hostname[0:3] == '"""' or hostname[-3:] == '"""':
+                comment = not comment
             elif hostname in valid_device_types and not comment:
                 device_type = hostname.lstrip('[').rstrip(']')
                 # set the device_type as long as the comment flag is false
@@ -226,13 +237,12 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
                 credential_set = hostname.lstrip('<').rstrip('>')
             elif hostname[0] == '<' and hostname[-1] == '>' and not comment:
                 group = hostname.lstrip('<').rstrip('>')
-                if group == "" or group == "default":
-                    group = "DEFAULT"
+                if group == "" or group == "default":  # Two alternative ways to specify
+                    group = "DEFAULT"                  # DEFAULT group
             elif not comment and device_type:
                 hosts.append(NetworkObject(hostname, device_type, group, credential_set))
             else:
-                pass
-                #Presumably comments  
+                pass  # This covers block comments
 
     return hosts
     
@@ -498,7 +508,7 @@ def device_connect():
     except IOError as e:
         print("\nCould not open required input file (make sure there are no typos or if the file exists). IOError with message: %s\n\n" % e)
         sys.exit()
-    
+    sys.exit() # Introduced for testing pythonic comments. 
     
     # Sys argv block above checks if username was passed with -u on command line, this takes precedence
     if username:
