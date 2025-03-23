@@ -37,9 +37,9 @@ class MyThread (Thread):
     """ Class that defines thread objects. This allows use of multithreading the ssh function.
     """
 
-    def __init__(self, threadID: str, q: Queue, commands: dict[str, dict[str, list[str]]]):
+    def __init__(self, thread_id: str, q: Queue, commands: dict[str, dict[str, list[str]]]):
         super().__init__()
-        self.threadID = threadID
+        self.thread_id = thread_id
         self.q = q
         self.commands = commands
 
@@ -47,9 +47,9 @@ class MyThread (Thread):
         """ Calls ssh function for a particular thread instance. 'q' contains the network objects
         """
 
-        print("Starting thread ID:  "+str(self.threadID))
-        ssh_command(self.threadID, self.q, self.commands)
-        print("Ending thread ID:  "+str(self.threadID))
+        print("Starting thread ID:  "+str(self.thread_id))
+        ssh_command(self.thread_id, self.q, self.commands)
+        print("Ending thread ID:  "+str(self.thread_id))
 
 
 def pretty_print_hostname(hostname: str) -> str:
@@ -92,12 +92,13 @@ def read_config_file(config_file_name:str) -> dict:
                   'encryptedPassword': '', 
                   'zipEnable': False,
                   'deleteFiles': False,
+                  'jsonOutput': False,
                   'sitePackagePath': '',
                   'emailSource': '',
                   'emailDestination': '',
                   'emailSubject': '', 
                   'emailBody': '', 
-                  'threadCount': '', 
+                  'thread_count': '', 
                   'emailUsername': '', 
                   'emailKey': '', 
                   'emailEncryptedPassword': '', 
@@ -143,6 +144,7 @@ def read_command_file(command_file_name: str) -> dict[str, dict[str, list[str]]]
     """ This reads the file that contains the commands to be run. This section identifies groups and device types.
     Groups allow the same device type to have different commands run against them.
     """
+
     commands = {}
     with open(command_file_name, 'r') as commands_file:
         device_type = ''
@@ -153,14 +155,15 @@ def read_command_file(command_file_name: str) -> dict[str, dict[str, list[str]]]
             if not line:
                 # Catches blank line
                 pass
-            elif line[0] == '#':
-                # Any lines enclosed by '#' is considered to be in a comment block
-                comment = not comment
-            elif line[0:2] == '//':
+            # Single line comment
+            elif line[0:3] == '"""' and line[-3:] == '"""' and len(line) >= 6 or line[0] == '#':
                 pass
-                # single line comment
+            # Any lines enclosed by '#' is considered to be in a commeynt block
+            elif line[0:3] == '"""' or line[-3:] == '"""':
+                comment = not comment
             elif line[0] == '<' and line[-1] == '>' and not comment:
                 group = line.lstrip('<').rstrip('>')
+                # Shortcut to specify default group, that is you can type <> instead of <DEFAULT>
                 if group == "":
                     group = "DEFAULT"
             elif line[0] == '[' and line[-1] == ']' and not comment:
@@ -202,7 +205,15 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
 
     with open(device_file_name, 'r') as devices_file:
         hosts = []
-        valid_device_types = ["[cisco_asa]", "[cisco_ios]", "[cisco_xe]", "[cisco_xr]", "[netscaler]", "[cisco_nxos]", "[linux]"]
+        valid_device_types = [
+            "[cisco_asa]", 
+            "[cisco_ios]", 
+            "[cisco_xe]", 
+            "[cisco_xr]", 
+            "[netscaler]", 
+            "[cisco_nxos]", 
+            "[linux]"
+            ]
         comment = False
         group = "DEFAULT"
         credential_set = "cred_default"
@@ -210,15 +221,17 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
         for line in devices_file:
             hostname = line.rstrip('\n\r\t')
             hostname = hostname.lower()
+            # Used to test if the current line is blank
             if not hostname:
                 pass
-                # Catches blank line
-            elif hostname[0] == '#':
-                # Any lines enclosed by '#' is considered to be in a comment block
-                comment = not comment
-            elif hostname[0:2] == '//':
+            # Catches comments that are only a single line
+            elif (hostname[0:3] == '"""' and hostname[-3:] == '"""' and len(hostname) >= 6
+                or hostname[0] == '#'):
                 pass
-                # single line comment
+            # Toggles block comments. An unterminated block will be
+            # considered to be run till EOF 
+            elif hostname[0:3] == '"""' or hostname[-3:] == '"""':
+                comment = not comment
             elif hostname in valid_device_types and not comment:
                 device_type = hostname.lstrip('[').rstrip(']')
                 # set the device_type as long as the comment flag is false
@@ -226,13 +239,12 @@ def read_device_file(device_file_name: str) -> list[NetworkObject]:
                 credential_set = hostname.lstrip('<').rstrip('>')
             elif hostname[0] == '<' and hostname[-1] == '>' and not comment:
                 group = hostname.lstrip('<').rstrip('>')
-                if group == "" or group == "default":
-                    group = "DEFAULT"
+                if group == "" or group == "default":  # Two alternative ways to specify
+                    group = "DEFAULT"                  # DEFAULT group
             elif not comment and device_type:
                 hosts.append(NetworkObject(hostname, device_type, group, credential_set))
             else:
-                pass
-                #Presumably comments  
+                pass  # This covers block comments
 
     return hosts
     
@@ -257,25 +269,25 @@ def zip_output_file(output_file_name: str, raw_output_files: list[str]) -> str:
     return zipped_output_file_name
 
 
-def ssh_command(threadID: str, q: Queue, commands):
-    """ SSH function. Takes objects of a queue and runs the appropriate commands against this. This is function is used by multiple threads, hence the queueLock 
-    when accessing the object queue. Likewise when storing results in the list of network objects, a listLock is utilized.
+def ssh_command(thread_id: str, q: Queue, commands):
+    """ SSH function. Takes objects of a queue and runs the appropriate commands against this. This is function is used by multiple threads, hence the queue_lock 
+    when accessing the object queue. Likewise when storing results in the list of network objects, a list_lock is utilized.
 
     This is where the networkObject will have its undefined variables potentially set. The 'result' will always be set. Depending on if the ssh function working 
     or not, either the 'error' or 'outputs' will be set.
     """
 
-    global exitFlag
-    global queueLock
-    global listLock
+    global exit_flag
+    global queue_lock
+    global list_lock
     global processed_hosts
 
 
-    while not exitFlag:
-        queueLock.acquire()
+    while not exit_flag:
+        queue_lock.acquire()
         if not q.empty():
             host = q.get()
-            queueLock.release()
+            queue_lock.release()
             attempt_number = 1
             max_retries = 3
             process_next_ConnectHandler = False
@@ -323,17 +335,17 @@ def ssh_command(threadID: str, q: Queue, commands):
                 host.outputs = outputs
 
             # This needs to be executed irrespective of an error raised or a success
-            listLock.acquire()
+            list_lock.acquire()
             processed_hosts.append(host)
-            listLock.release()
-            host_status = host.hostname + " processed by thread ID: " + str(threadID)
+            list_lock.release()
+            host_status = host.hostname + " processed by thread ID: " + str(thread_id)
             for i in range(50 - len(host_status)):
                 host_status += '.'
             host_status += host.result + '\n'
 
             print(host_status)
         else:
-            queueLock.release()
+            queue_lock.release()
 
 
 def get_password() -> str:
@@ -386,24 +398,26 @@ def device_connect():
     # With the exception of config_file_name which points to the file that sets the configuration, it is advised to not set any other variable from here.
     
     # Exit Flag for multithreading component
-    global exitFlag
-    exitFlag = False
+    global exit_flag
+    exit_flag = False
     # Lock for accessing queue
-    global queueLock
-    queueLock = Lock()
+    global queue_lock
+    queue_lock = Lock()
     # Lock for accessing processed_hosts
-    global listLock
-    listLock = Lock()
+    global list_lock
+    list_lock = Lock()
     
     # Hosts after they have been processed (via SSH function)
     global processed_hosts
     # processed_hosts = list[NetworkObject]
     processed_hosts = []
     
+    # JSON result is only used when the json_output flag is set
+    json_result = []
 
-    workQueue = None
+    work_queue = None
     threads = []
-    threadCount = None
+    thread_count = None
 
     command_file_name = None
     device_file_name = None
@@ -413,6 +427,7 @@ def device_connect():
     
     zip_output = None
     delete_output = None
+    json_output = None
     username = None
     filter_string = ''
     
@@ -464,13 +479,15 @@ def device_connect():
             # Manually set the thread count
             elif sys.argv[i] == '-t':
                 i += 1
-                threadCount = int(sys.argv[i])
+                thread_count = int(sys.argv[i])
             # Zips the output files. This is False by default, -z turns it on.
             elif sys.argv[i] == '-z':
                 zip_output = True
             # Delete the output files. This is False by default, --delete turns it on.
             elif sys.argv[i] == '--delete':
                 delete_output = True
+            elif sys.argv[i] == '-j':
+                json_output = True
             elif sys.argv[i] == '--subject':
                 i += 1
                 email_subject = sys.argv[i]
@@ -479,17 +496,17 @@ def device_connect():
                 email_body = sys.argv[i] + '\n\n'
 
                     
-    configFileOutput = read_config_file(config_file_name)
+    config_file_output = read_config_file(config_file_name)
 
         
-    # configFileOutput will pass defaults (set in the read_config_file() above) if the configuration file is not found
+    # config_file_output will pass defaults (set in the read_config_file() above) if the configuration file is not found
     # The following 5 values are the bare minimum needed to run the program
     if not command_file_name:
-        command_file_name = configFileOutput['commands']
+        command_file_name = config_file_output['commands']
     if not device_file_name:
-        device_file_name = configFileOutput['devices']
+        device_file_name = config_file_output['devices']
     if not output_file_name:
-        output_file_name = configFileOutput['output']
+        output_file_name = config_file_output['output']
     
     
     try:
@@ -499,7 +516,6 @@ def device_connect():
         print("\nCould not open required input file (make sure there are no typos or if the file exists). IOError with message: %s\n\n" % e)
         sys.exit()
     
-    
     # Sys argv block above checks if username was passed with -u on command line, this takes precedence
     if username:
         key_chain = get_passwords(username, 'cred_default')
@@ -507,11 +523,11 @@ def device_connect():
 
     # Second priority is setting the 'key' in the configuration file
     # Default val is '' - Test this in the config file by leaving it blank.
-    elif configFileOutput['key']:
+    elif config_file_output['key']:
 
         try:
-            fnet_key = Fernet(configFileOutput['key'])
-            with open(configFileOutput['encryptedPassword'], 'r') as json_file:
+            fnet_key = Fernet(config_file_output['key'])
+            with open(config_file_output['encryptedPassword'], 'r') as json_file:
                 key_chain = json.load(json_file)
         
 
@@ -525,8 +541,8 @@ def device_connect():
             key_chain[key]['secret'] = fnet_key.decrypt(key_chain[key]['secret']).decode()
 
     # Check if username is set in config file, this is the 3rd option
-    elif configFileOutput['username']:
-        key_chain = get_passwords(configFileOutput['username'], 'cred_default')
+    elif config_file_output['username']:
+        key_chain = get_passwords(config_file_output['username'], 'cred_default')
 
 
     # Prompt for a username is the final and fourth option.
@@ -553,47 +569,50 @@ def device_connect():
     # sys.exit() 
 
     if not zip_output:
-        zip_output = configFileOutput['zipEnable']
+        zip_output = config_file_output['zipEnable']
 
 
     if not delete_output:
-        delete_output = configFileOutput['deleteFiles']
+        delete_output = config_file_output['deleteFiles']
+
+    if not json_output:
+        json_output = config_file_output['jsonOutput']
 
 
     # Logging configuration to troubleshoot netmiko issues
 
 
     if not email_subject:
-        email_subject = configFileOutput['emailSubject']
+        email_subject = config_file_output['emailSubject']
     if not email_subject:
         email_subject = 'Output File for script: %s' % os.path.basename(__file__)
     if not email_body:
-        email_body = configFileOutput['emailBody']
+        email_body = config_file_output['emailBody']
     if not smtp_port:
-        smtp_port = configFileOutput['smtpPort']
+        smtp_port = config_file_output['smtpPort']
     if not email_username:
-        email_username = configFileOutput['emailUsername']
+        email_username = config_file_output['emailUsername']
     if not use_tls:
-        use_tls = configFileOutput['useTls']
+        use_tls = config_file_output['useTls']
 
     
     
-    if not threadCount:
+    if not thread_count:
         try:
-            threadCount = int(configFileOutput['threadCount'])
+            thread_count = int(config_file_output['thread_count'])
         except:
             pass
 
 
-    emailSource = configFileOutput['emailSource']
-    smtpServer = configFileOutput['smtpServer']
+    email_source = config_file_output['emailSource']
+    smtp_server = config_file_output['smtpServer']
     # Check to see if mail passwords are set: ie, secure SMTP server authentication
-    if configFileOutput['emailKey'] != '':
-        fnet_key = Fernet(configFileOutput['emailKey'])
-        email_password = fnet_key.decrypt(configFileOutput['emailEncryptedPassword']).decode()
+    if config_file_output['emailKey'] != '':
+        fnet_key = Fernet(config_file_output['emailKey'])
+        email_password = fnet_key.decrypt(config_file_output['emailEncryptedPassword']).decode()
 
 
-    mail_to += configFileOutput['emailDestination']
+    mail_to += config_file_output['emailDestination']
 
 
     print("\n\nAttempting connecting to hosts:\n\n")
@@ -601,30 +620,30 @@ def device_connect():
     # Multithreading block of code
     
     # Set the number of threads if value has not been passed from CLI
-    if not threadCount:
-        threadCount = len(hosts)
-        if threadCount > 100:
-            threadCount = 100
-    elif threadCount > len(hosts):
-        threadCount = len(hosts)
+    if not thread_count:
+        thread_count = len(hosts)
+        if thread_count > 100:
+            thread_count = 100
+    elif thread_count > len(hosts):
+        thread_count = len(hosts)
     
-    workQueue = Queue(len(hosts))
+    work_queue = Queue(len(hosts))
 
     # create actual threads from thread names. MyThread gets the SSH command executed
-    for threadID in range(1, threadCount+1):
-        thread = MyThread(threadID, workQueue, commands)
+    for thread_id in range(1, thread_count+1):
+        thread = MyThread(thread_id, work_queue, commands)
         thread.start()
         threads.append(thread)
 
 
     for host in hosts:
-        workQueue.put(host)
+        work_queue.put(host)
     # This clears hosts for the next bit. Might be better to rename this processed_hosts
 
-    while not workQueue.empty():
+    while not work_queue.empty():
         pass
 
-    exitFlag = True
+    exit_flag = True
     for t in threads:
         t.join()
 
@@ -669,7 +688,7 @@ def device_connect():
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string
 
-        mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, None, smtpServer, smtp_port, use_tls, email_username, email_password)
+        mailattachment.send_mail(email_source, mail_to, email_subject, email_body, None, smtp_server, smtp_port, use_tls, email_username, email_password)
 
 
 
@@ -694,13 +713,17 @@ def device_connect():
             if processed_host.result == 'success':
                 try:
                     with open(os.path.join(output_dirpath, processed_host.hostname + ".txt"),'w') as output_file:
-                        output_file.write(pretty_print_hostname(processed_host.hostname))
-                        for command in processed_host.outputs:
-                            output_file.write("--------- %s " % command)
-                            tail = ''
-                            for i in range(57 - len(command)): #Might need to catch here for long commands
-                                tail += '-'
-                            output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
+                        if not json_output:
+                            output_file.write(pretty_print_hostname(processed_host.hostname))
+                            for command in processed_host.outputs:
+                                output_file.write("--------- %s " % command)
+                                tail = ''
+                                for i in range(57 - len(command)): #Might need to catch here for long commands
+                                    tail += '-'
+                                output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
+                        else:
+                            json.dump({processed_host.hostname : processed_host.outputs}, output_file, indent=4)
+
                     passed_list.append(processed_host)
                 except IOError as e:
                     print("\nCould not open input file. IOError with message: %s\n\n" % e)
@@ -727,7 +750,7 @@ def device_connect():
             except OSError as e:
                 print("Error deleting directory after zipping file. Error: %s - %s." % (e.filename, e.strerror))
             
-            mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls, email_username, email_password)
+            mailattachment.send_mail(email_source, mail_to, email_subject, email_body, [output_file_name], smtp_server, smtp_port, use_tls, email_username, email_password)
 
 
             # If delete is set, this removes the zip file, leaving no output on the host machine. Use this if you are counting on the email for output data.
@@ -747,21 +770,30 @@ def device_connect():
             ####Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set####
                 for processed_host in processed_hosts:
                     if processed_host.result == 'success':
-                        output_file.write(pretty_print_hostname(processed_host.hostname))
-                        for command in processed_host.outputs:
-                            output_file.write("--------- %s " % command)
-                            tail = ''
-                            for i in range(57 - len(command)): #Might need to catch here for long commands
-                                tail += '-'
-                            output_file.write("%s\n%s\n\n" % (tail, processed_host.outputs[command]))
+                        if not json_output:
+                            output_file.write(pretty_print_hostname(processed_host.hostname))
+                            for command in processed_host.outputs:
+                                output_file.write("--------- %s " % command)
+                                tail = ''
+                                for i in range(57 - len(command)): #Might need to catch here for long commands
+                                    tail += '-'
+                                output_file.write("%s\n%s\n\n" % (tail, processed_host.outputs[command]))
+                        else:
+                            json_result.append({ processed_host.hostname : processed_host.outputs})
                         passed_list.append(processed_host)
                     ####Hosts that failed are appended to a list#####
                     elif processed_host.result == 'fail':
                         failed_list.append(processed_host)
-
+                else:
+                    if json_output:
+                        json.dump(json_result, output_file, indent=4)
         except IOError as e:
             print("\nCould not open output file. IOError with message: %s\n\n" % e)
             sys.exit()
+        except Exception as e:
+            print("\nSomething else went wrong when attempting to write output file. Exception with message: %s\n\n" % e)
+            sys.exit()
+
         
         if len(passed_list) != 0:
             passed_list_string = "\n\nCommand was successful on the following devices:\n\n"
@@ -774,8 +806,6 @@ def device_connect():
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string         
     
-        
-        # ADD BLOCK for catching empty output file
 
         # Zip flag or file over 5MB forces zipping. Once zipped, original file removed.
         if os.stat(output_file_name).st_size > 5000000 or zip_output is True:
@@ -792,7 +822,7 @@ def device_connect():
             # os.chmod(output_file_name,0o666)
 
         
-        mailattachment.send_mail(emailSource, mail_to, email_subject, email_body, [output_file_name], smtpServer, smtp_port, use_tls,  email_username, email_password)
+        mailattachment.send_mail(email_source, mail_to, email_subject, email_body, [output_file_name], smtp_server, smtp_port, use_tls,  email_username, email_password)
 
         
 
