@@ -399,7 +399,7 @@ def device_connect():
     global processed_hosts
     # processed_hosts = list[NetworkObject]
     processed_hosts = []
-    
+    json_result = []
 
     workQueue = None
     threads = []
@@ -413,6 +413,7 @@ def device_connect():
     
     zip_output = None
     delete_output = None
+    json_output = False
     username = None
     filter_string = ''
     
@@ -639,6 +640,7 @@ def device_connect():
 ######################################
 
 
+    output_file_name = "SPLIT"
     if filter_string:
         print("\n\nMatch flag '--find' has been set, no output file will be generated\n")
         # Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set
@@ -694,13 +696,18 @@ def device_connect():
             if processed_host.result == 'success':
                 try:
                     with open(os.path.join(output_dirpath, processed_host.hostname + ".txt"),'w') as output_file:
-                        output_file.write(pretty_print_hostname(processed_host.hostname))
-                        for command in processed_host.outputs:
-                            output_file.write("--------- %s " % command)
-                            tail = ''
-                            for i in range(57 - len(command)): #Might need to catch here for long commands
-                                tail += '-'
-                            output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
+                        json_output = True
+                        if not json_output:
+                            output_file.write(pretty_print_hostname(processed_host.hostname))
+                            for command in processed_host.outputs:
+                                output_file.write("--------- %s " % command)
+                                tail = ''
+                                for i in range(57 - len(command)): #Might need to catch here for long commands
+                                    tail += '-'
+                                output_file.write("%s\n%s\n\n" % (tail,processed_host.outputs[command]))
+                        else:
+                            json.dump({processed_host.hostname : processed_host.outputs}, output_file, indent=4)
+
                     passed_list.append(processed_host)
                 except IOError as e:
                     print("\nCould not open input file. IOError with message: %s\n\n" % e)
@@ -747,21 +754,31 @@ def device_connect():
             ####Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set####
                 for processed_host in processed_hosts:
                     if processed_host.result == 'success':
-                        output_file.write(pretty_print_hostname(processed_host.hostname))
-                        for command in processed_host.outputs:
-                            output_file.write("--------- %s " % command)
-                            tail = ''
-                            for i in range(57 - len(command)): #Might need to catch here for long commands
-                                tail += '-'
-                            output_file.write("%s\n%s\n\n" % (tail, processed_host.outputs[command]))
+                        json_output = True
+                        if not json_output:
+                            output_file.write(pretty_print_hostname(processed_host.hostname))
+                            for command in processed_host.outputs:
+                                output_file.write("--------- %s " % command)
+                                tail = ''
+                                for i in range(57 - len(command)): #Might need to catch here for long commands
+                                    tail += '-'
+                                output_file.write("%s\n%s\n\n" % (tail, processed_host.outputs[command]))
+                        else:
+                            json_result.append({ processed_host.hostname : processed_host.outputs})
                         passed_list.append(processed_host)
                     ####Hosts that failed are appended to a list#####
                     elif processed_host.result == 'fail':
                         failed_list.append(processed_host)
-
+                else:
+                    if json_output:
+                        json.dump(json_result, output_file, indent=4)
         except IOError as e:
             print("\nCould not open output file. IOError with message: %s\n\n" % e)
             sys.exit()
+        except Exception as e:
+            print("\nSomething else went wrong when attempting to write output file. Exception with message: %s\n\n" % e)
+            sys.exit()
+
         
         if len(passed_list) != 0:
             passed_list_string = "\n\nCommand was successful on the following devices:\n\n"
@@ -774,8 +791,6 @@ def device_connect():
                failed_list_string += "%s: %s\n" % (host.hostname,host.error)
             email_body += failed_list_string         
     
-        
-        # ADD BLOCK for catching empty output file
 
         # Zip flag or file over 5MB forces zipping. Once zipped, original file removed.
         if os.stat(output_file_name).st_size > 5000000 or zip_output is True:
