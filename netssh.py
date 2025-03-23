@@ -508,7 +508,6 @@ def device_connect():
     except IOError as e:
         print("\nCould not open required input file (make sure there are no typos or if the file exists). IOError with message: %s\n\n" % e)
         sys.exit()
-    sys.exit() # Introduced for testing pythonic comments. 
     
     # Sys argv block above checks if username was passed with -u on command line, this takes precedence
     if username:
