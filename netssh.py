@@ -258,24 +258,24 @@ def zip_output_file(output_file_name: str, raw_output_files: list[str]) -> str:
 
 
 def ssh_command(threadID: str, q: Queue, commands):
-    """ SSH function. Takes objects of a queue and runs the appropriate commands against this. This is function is used by multiple threads, hence the queueLock 
+    """ SSH function. Takes objects of a queue and runs the appropriate commands against this. This is function is used by multiple threads, hence the queue_lock 
     when accessing the object queue. Likewise when storing results in the list of network objects, a listLock is utilized.
 
     This is where the networkObject will have its undefined variables potentially set. The 'result' will always be set. Depending on if the ssh function working 
     or not, either the 'error' or 'outputs' will be set.
     """
 
-    global exitFlag
-    global queueLock
+    global exit_flag
+    global queue_lock
     global listLock
     global processed_hosts
 
 
-    while not exitFlag:
-        queueLock.acquire()
+    while not exit_flag:
+        queue_lock.acquire()
         if not q.empty():
             host = q.get()
-            queueLock.release()
+            queue_lock.release()
             attempt_number = 1
             max_retries = 3
             process_next_ConnectHandler = False
@@ -333,7 +333,7 @@ def ssh_command(threadID: str, q: Queue, commands):
 
             print(host_status)
         else:
-            queueLock.release()
+            queue_lock.release()
 
 
 def get_password() -> str:
@@ -386,11 +386,11 @@ def device_connect():
     # With the exception of config_file_name which points to the file that sets the configuration, it is advised to not set any other variable from here.
     
     # Exit Flag for multithreading component
-    global exitFlag
-    exitFlag = False
+    global exit_flag
+    exit_flag = False
     # Lock for accessing queue
-    global queueLock
-    queueLock = Lock()
+    global queue_lock
+    queue_lock = Lock()
     # Lock for accessing processed_hosts
     global listLock
     listLock = Lock()
@@ -625,7 +625,7 @@ def device_connect():
     while not workQueue.empty():
         pass
 
-    exitFlag = True
+    exit_flag = True
     for t in threads:
         t.join()
 
@@ -640,7 +640,6 @@ def device_connect():
 ######################################
 
 
-    output_file_name = "SPLIT"
     if filter_string:
         print("\n\nMatch flag '--find' has been set, no output file will be generated\n")
         # Main loop writing processed output into the output file. Also creates a list for the "match string" if that is set
