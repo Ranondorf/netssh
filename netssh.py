@@ -72,19 +72,13 @@ class MyThread (Thread):
 
 
 def pretty_print_hostname(hostname: str) -> str:
-    """ Pretty prints the hostname in a banner, this is returned as a string.
+    """ Pretty prints the hostname in a banner, this is returned as a string. Max length of 80.
     """
 
     length = 80
-    hash_line = '#'
-    for i in range(length-1):
-        hash_line += '#'
-
-    blank_line = '#'
-    for i in range(length-2):
-        blank_line += ' '
-    blank_line += '#'
-
+    hash_line = "".join(['#' for i in range(length)])
+    blank_line = '#' + "".join([' ' for i in range(length-2)]) + '#'
+    
     host_line = '#'
     for i in range(int(length/2-1-math.ceil(len(hostname)/2))):
         host_line += ' '
