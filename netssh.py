@@ -1,3 +1,22 @@
+#!/usr/bin/env python3
+
+"""SSH Automation tool
+
+Tool to run commands on multiple devices and return the outputs. Multithreaded
+ and multi vendor. Currently only supports read only commands. Can provide
+output as single file or multiple files. Supports email delivery.
+
+Currently supports:
+            "[cisco_asa]", 
+            "[cisco_ios]", 
+            "[cisco_xe]", 
+            "[cisco_xr]", 
+            "[netscaler]", 
+            "[cisco_nxos]", 
+            "[linux]"
+ 
+"""
+
 import os
 import getpass
 from netmiko import ConnectHandler
@@ -13,9 +32,9 @@ from zipfile import ZIP_DEFLATED
 from cryptography.fernet import Fernet
 import shutil
 import json
-# scriptlogger and mailattachment are currently not functioning.
-import common.scriptlogger as scriptlogger
 import common.mailattachment as mailattachment
+# scriptlogger is currently not functioning.
+import common.scriptlogger as scriptlogger
 
 
 class NetworkObject:
@@ -57,8 +76,8 @@ def pretty_print_hostname(hostname: str) -> str:
     """
 
     length = 80
-    hash_line = ''
-    for i in range(length):
+    hash_line = '#'
+    for i in range(length-1):
         hash_line += '#'
 
     blank_line = '#'
@@ -75,9 +94,7 @@ def pretty_print_hostname(hostname: str) -> str:
         host_line += ' '
     host_line += '#'
 
-    pretty_hostname = '%s\n%s\n%s\n%s\n%s\n\n\n' % (hash_line, blank_line, host_line, blank_line, hash_line)
-
-    return pretty_hostname
+    return '%s\n%s\n%s\n%s\n%s\n\n\n' % (hash_line, blank_line, host_line, blank_line, hash_line)
 
 
 def read_config_file(config_file_name:str) -> dict:

@@ -63,4 +63,4 @@ def send_mail(send_from: str,
     except Exception as e:
         print("\n\nEmail not sent,", f"Error message: {e}")
     else:
-        print("\n\nEmail sent")
+        print(f"\n\nEmail sent to {msg['To']} at {msg['Date']}")
