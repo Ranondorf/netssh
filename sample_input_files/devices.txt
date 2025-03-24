@@ -1,12 +1,52 @@
-//Sample config, this is a single line comment. The alternative is a multiline comment block which is what the config below is encapsulated in with the use of #
-//The program checks the first position for // or # to recognize comments. Remove the # tags to allow commands to be run against the hosts below
-#
-[linux]
-alias1
-alias2
-alias3
-[cisco_asa]
-192.168.30.32
-host1
-host2
-#
+"""This is the file where you define which commands you want to run against which devices.
+
+There are several constructs that are in the file, I will go through all the pertinent ones.
+
+
+Comments: Can be either single line or multiline. In fact now we are in a multiline comment block.
+
+Multiline: The first characters on a line neeed to have """ and the last three characters of that line
+or a later line need to be """. This is a comment block. Unlike python ''' will not work and """ are only
+supported at the start or the end of the line, otherwise they are ignored.
+
+Singleline: Single line comment is the # character at the start position of the line. Anywhere else it is
+ignored.
+
+Here is a sample use case of this file:
+
+[cisco_ios]
+router_1
+switch_2
+<cred_1>
+<group_a>
+switch_1
+<DEFAULT>
+[cisco_xr]
+<cred_default>
+router_2
+<test>
+router_3
+router_4
+
+
+There are three main components to breakdown here: Type, Command and Group.
+
+Type: Is specified in []. This designates the device type.
+
+Group: is in <>. This defines a group of devices, it can be cross platform.
+       The group is not mandatory. There is a default group called <DEFAULT>.
+       All devices are in the default group unless explicitly assigned to something else.
+       The default group can be specified by: <DEFAULT>, <> and <default>
+Command: Are the commands to run, these should be compatible from device type.
+
+So given the previous example, this is how items will be processed:
+
+In the <default> group, [cisco_ios] devices will have sh clock and sh ver run. Again in the default group IOS [cisco_xr]
+devices will run sh clock and sh ver.
+
+In group <test>, [cisco_xr] devices will run only the sh clock command
+
+In <group_a>, [cisco_ios] will run sh clock and sh ver
+
+
+"""

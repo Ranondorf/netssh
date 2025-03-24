@@ -37,9 +37,11 @@ output=output.txt
 # emailKey=
 # emailEncryptedPassword=
 
+# Set the output in the output file(s) in a JSON format. 
+# jsonOutput=True
 
 # Set zipping the output file. This is False by default and output will not be zipped; unless it is considered big and the program will zip it anyway.
-# zipEnable=False
+# zipEnable=True
 
 # Delete the output file(s) that are on disk. May want to do this if emailing the output files(s). This is False by default.
 # deleteFiles=True
