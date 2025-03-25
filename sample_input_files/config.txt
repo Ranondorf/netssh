@@ -1,47 +1,55 @@
-# Defaults file
-# Program will always look for this file in the directory where the program is called from. This can be overriden with a runtime flag to specify the location of the config file.
+##########################################################################################################
+## Defaults file
+# Program will always look for this file in the directory where the program is called from. This can be overriden with a runtime flag to 
+# specify the location of the config file.
 # Always comment out unused variables
 
-# Mandatory, these need to be set
+## Mandatory, these need to be set. These are default names, you can name them whatever you want.
+# File containing commands to be run
 commands=commands.txt
+# File containing devices to run commands against
 devices=devices.txt
+# Output file, this will keep getting overridden unless per device outputs are selected, in which case a date is suffixed.
 output=output.txt
-
+##########################################################################################################
+##########################################################################################################
+## Authentication section
 # Program will normally prompt for username, unless below is set
 # username=
-
 # Password information when password is not manually entered at runtime. Password has to be encrypted on the disk, for that a key is required.
 # The values required for the below can be acquired by running the generateEncryption.py file in common. Copy the generated info into 2 text files
-# and add the path below
-
+# and add the paths below ("key" and "encryptedPassword" provide the location of the text files). Do not set a username here, on the CLI or when 
+# prompted if using different usernames and passwords. Just run the aformentioned script and set the "key" and "encryptedPassword" fields.
 # Path of the file containing decryption key 
 # key=
 # Path of the file containing encrypted password
 # encryptedPassword=
-
-# Email Settings
-
+##########################################################################################################
+##########################################################################################################
+## Email Settings: emailSubject and emailBody are optional. SMTP, Encryption and authentication are dependant on how you plan to send emails.
 # smtpServer=
-
-# Set this appropriately, especially if authentication is used. For an open SMTP relay it is ususally 25
+# Be careful as external SMTP servers (eg google) do not use port 25 anymore.
 # smtpPort=
 # emailSource=
 # emailDestination=
 # emailSubject=
 # emailBody=
-
-# Only used where authentication is applicable
+# Set TLS usage, defaults to True
+# useTls=False
+# Only used where authentication is required
 # emailUsername=
-
-# Same process as used for the password further up, only required if a authentication is used
+# The contents of the emailKey file and the emailEncryptedPassword file are generated via the generateEncryption.py script.
+# Location of file containing encryption key
 # emailKey=
+# Location of file containing encrypted password
 # emailEncryptedPassword=
-
-# Set the output in the output file(s) in a JSON format. 
+##########################################################################################################
+##########################################################################################################
+## Output file options
+# Set the output in the output file(s) in a JSON format. Default is False. 
 # jsonOutput=True
-
 # Set zipping the output file. This is False by default and output will not be zipped; unless it is considered big and the program will zip it anyway.
 # zipEnable=True
-
 # Delete the output file(s) that are on disk. May want to do this if emailing the output files(s). This is False by default.
 # deleteFiles=True
+##########################################################################################################

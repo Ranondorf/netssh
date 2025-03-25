@@ -175,7 +175,7 @@ def read_command_file(command_file_name: str) -> dict[str, dict[str, list[str]]]
             elif line[0] == '<' and line[-1] == '>' and not comment:
                 group = line.lstrip('<').rstrip('>')
                 # Shortcut to specify default group, that is you can type <> instead of <DEFAULT>
-                if group == "":
+                if group == "" or group == "default":
                     group = "DEFAULT"
             elif line[0] == '[' and line[-1] == ']' and not comment:
                 # Catches line matching device type, eg: ios_xr, netscaler, etc
@@ -395,7 +395,7 @@ def timer(func):
     def wrapper():
         start_time = time.time()
         func()
-        print(f'Script run time is {str(time.time() - start_time)} seconds\n')
+        print(f'Script run time is {time.time() - start_time:.2f} seconds\n')
     return wrapper
 
 
