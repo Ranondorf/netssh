@@ -1,4 +1,4 @@
-"""This is the file where you define which commands you want to run against which devices.
+"""This is the file where you define the device names, types, groups and credentials.
 
 There are several constructs that are in the file, I will go through all the pertinent ones.
 
@@ -29,24 +29,29 @@ router_3
 router_4
 
 
-There are three main components to breakdown here: Type, Command and Group.
+There are four main components to breakdown here: Hosts, Type, Credentials and Group.
+
+Hosts: These are the hostnames of IP addresses of the devices
 
 Type: Is specified in []. This designates the device type.
+     This is common across the commands and devices file.
 
 Group: is in <>. This defines a group of devices, it can be cross platform.
        The group is not mandatory. There is a default group called <DEFAULT>.
        All devices are in the default group unless explicitly assigned to something else.
        The default group can be specified by: <DEFAULT>, <> and <default>
-Command: Are the commands to run, these should be compatible from device type.
+       This is common across the commands and devices file.
+
+Credentials: Are in enclosed in <>. They are of the format <cred_default>, <cred_1>, <cred_2> and
+             so on and so forth. These map to a creds file if it has been created. This allows for 
+             using different credentials on different devices.
 
 So given the previous example, this is how items will be processed:
 
-In the <default> group, [cisco_ios] devices will have sh clock and sh ver run. Again in the default group IOS [cisco_xr]
-devices will run sh clock and sh ver.
+router_1 and switch_2 are type [cisco_ios] and are in group <default> and they use credentials <cred_default>
+switch_1 is of type [cisco_ios] and in group <group_a> and use credentials <cred_1>
+router_2 is of type [cisco_xr] and in group <default> and uses <cred_default>
+router_3 and router_4 are type [cisco_xr] and are in group <test> and use <cred_default>
 
-In group <test>, [cisco_xr] devices will run only the sh clock command
-
-In <group_a>, [cisco_ios] will run sh clock and sh ver
-
-
+The comment block is over after the """ on the line below. Add your configuraiton after that.
 """

@@ -29,12 +29,15 @@ sh ver
 
 There are three main components to breakdown here: Type, Command and Group.
 
-Type: Is specified in []. This designates the device type.
+Type: Is specified in []. This designates the device type. This is common across the
+      commands and devices file.
 
 Group: is in <>. This defines a group of devices, it can be cross platform.
        The group is not mandatory. There is a default group called <DEFAULT>.
        All devices are in the default group unless explicitly assigned to something else.
        The default group can be specified by: <DEFAULT>, <> and <default>
+       This is common across the commands and devices file.
+
 Command: Are the commands to run, these should be compatible from device type.
 
 So given the previous example, this is how items will be processed:
@@ -46,5 +49,5 @@ In group <test>, [cisco_xr] devices will run only the sh clock command
 
 In <group_a>, [cisco_ios] will run sh clock and sh ver
 
-
+The comment block is over after the """ on the line below. Add your configuraiton after that.
 """
